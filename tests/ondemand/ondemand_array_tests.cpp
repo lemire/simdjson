@@ -8,7 +8,7 @@ namespace array_tests {
   using simdjson::ondemand::json_type;
   bool issue1588() {
     TEST_START();
-    const auto json = R"({
+    const auto json = std::string_view(R"({
     "nodes" : [
         {
             "rotation" : [
@@ -51,7 +51,7 @@ namespace array_tests {
             ]
         }
     ]
-})"_padded;
+})");
     // we query 'rotation', 'scale', 'translation' in sequence
     const bool expected_value[][3] = { {true, false, true},
       {true, false, false}, {false, false, true}, {false, true, false} };
@@ -136,9 +136,101 @@ namespace array_tests {
     TEST_SUCCEED();
   }
 
-  bool iterate_document_array() {
+  bool iterate_complex_array_count() {
+    TEST_START();
+    ondemand::parser parser;
+    auto cars_json = R"( { "test":[ { "val1":1, "val2":2 }, { "val1":1, "val2":2 } ] }   )"_padded;
+    ondemand::document doc;
+    ASSERT_SUCCESS(parser.iterate(cars_json).get(doc));
+    ondemand::array myarray;
+    ASSERT_SUCCESS(doc.find_field("test").get_array().get(myarray));
+    size_t count;
+    ASSERT_SUCCESS(myarray.count_elements().get(count));
+    size_t new_count = 0;
+    for(simdjson_unused auto elem: myarray) { new_count++; }
+    ASSERT_EQUAL(count, new_count);
+    TEST_SUCCEED();
+  }
+
+  bool iterate_sub_array_count() {
+    TEST_START();
+    ondemand::parser parser;
+    auto key_value_json = R"( { "test":[ 1,2,3], "joe": [1,2] }   )"_padded;
+    ondemand::document doc;
+    ASSERT_SUCCESS(parser.iterate(key_value_json).get(doc));
+    ondemand::object obj;
+    ASSERT_SUCCESS(doc.get_object().get(obj));
+    ondemand::value v;
+    ASSERT_SUCCESS(doc.find_field("test").get(v));
+    size_t count;
+    ASSERT_SUCCESS(v.count_elements().get(count));
+    ASSERT_EQUAL(count, 3);
+    ASSERT_SUCCESS(doc.find_field("joe").get(v));
+    ASSERT_SUCCESS(v.count_elements().get(count));
+    ASSERT_EQUAL(count, 2);
+    TEST_SUCCEED();
+  }
+
+  bool iterate_array_count() {
     TEST_START();
     const auto json = R"([ 1, 10, 100 ])"_padded;
+    const auto badjson = R"([ 1, 10 100 ])"_padded;
+    const vector<uint64_t> expected_value = { 1, 10, 100 };
+
+    SUBTEST("ondemand::count_elements", test_ondemand_doc(json, [&](auto doc_result) {
+      ondemand::array array;
+      ASSERT_RESULT( doc_result.type(), json_type::array );
+      ASSERT_SUCCESS( doc_result.get(array) );
+      size_t count;
+      ASSERT_SUCCESS( array.count_elements().get(count) );
+      ASSERT_EQUAL(count, expected_value.size());
+      return true;
+    }));
+    SUBTEST("ondemand::count_elements_and_decode", test_ondemand_doc(json, [&](auto doc_result) {
+      ondemand::array array;
+      ASSERT_RESULT( doc_result.type(), json_type::array );
+      ASSERT_SUCCESS( doc_result.get(array) );
+      size_t count;
+      ASSERT_SUCCESS( array.count_elements().get(count) );
+      ASSERT_EQUAL(count, expected_value.size());
+      size_t i = 0;
+      std::vector<uint64_t> receiver(count);
+      for (auto value : array) {
+        uint64_t actual;
+        ASSERT_SUCCESS( value.get(actual) );
+        ASSERT_EQUAL(actual, expected_value[i]);
+        receiver[i] = actual;
+        i++;
+      }
+      return true;
+    }));
+    TEST_SUCCEED();
+  }
+
+  bool iterate_bad_array_count() {
+    TEST_START();
+    const auto badjson = R"([ 1, 10 100 ])"_padded;
+
+
+    SUBTEST("ondemand::count_elements", test_ondemand_doc(badjson, [&](auto doc_result) {
+      ondemand::array array;
+      ASSERT_RESULT( doc_result.type(), json_type::array );
+      ASSERT_SUCCESS( doc_result.get(array) );
+      size_t count;
+      auto e = array.count_elements().get(count);
+      if( e != TAPE_ERROR) {
+        std::cout << e << "\n";
+        std::cout << "expected: " << TAPE_ERROR << "\n";
+        std::cout << "count = " << count << "\n";
+        return false;
+      }
+      return true;
+    }));
+    TEST_SUCCEED();
+  }
+  bool iterate_document_array() {
+    TEST_START();
+    const auto json = std::string_view(R"([ 1, 10, 100 ])");
     const uint64_t expected_value[] = { 1, 10, 100 };
 
     SUBTEST("ondemand::array", test_ondemand_doc(json, [&](auto doc_result) {
@@ -214,7 +306,7 @@ namespace array_tests {
 
   bool iterate_array() {
     TEST_START();
-    const auto json = R"( [ [ 1, 10, 100 ] ] )"_padded;
+    const auto json = std::string_view(R"( [ [ 1, 10, 100 ] ] )");
     const uint64_t expected_value[] = { 1, 10, 100 };
 
     SUBTEST("ondemand::array", test_ondemand_doc(json, [&](auto doc_result) {
@@ -289,7 +381,7 @@ namespace array_tests {
 
   bool iterate_array_partial_children() {
     TEST_START();
-    auto json = R"(
+    auto json = std::string_view(R"(
       [
         0,
         [],
@@ -303,7 +395,7 @@ namespace array_tests {
         { "a": [ { "b": [ 9, 99 ], "c": 999 }, 9999 ], "d": 99999 },
         10
       ]
-    )"_padded;
+    )");
     SUBTEST("simdjson_result<ondemand::document>", test_ondemand_doc(json, [&](auto doc_result) {
       size_t i = 0;
       for (auto value : doc_result) {
@@ -426,7 +518,7 @@ namespace array_tests {
 
   bool iterate_empty_array() {
     TEST_START();
-    auto json = "[]"_padded;
+    auto json = std::string_view("[]");
     SUBTEST("ondemand::array", test_ondemand_doc(json, [&](auto doc_result) {
       ondemand::array array;
       ASSERT_SUCCESS( doc_result.get(array) );
@@ -471,7 +563,7 @@ namespace array_tests {
 
   bool iterate_array_exception() {
     TEST_START();
-    auto json = R"([ 1, 10, 100 ])"_padded;
+    auto json = std::string_view(R"([ 1, 10, 100 ])");
     const uint64_t expected_value[] = { 1, 10, 100 };
 
     ASSERT_TRUE(test_ondemand_doc(json, [&](auto doc_result) {
@@ -485,7 +577,7 @@ namespace array_tests {
 
   bool iterate_empty_object_exception() {
     TEST_START();
-    auto json = R"({})"_padded;
+    auto json = std::string_view(R"({})");
 
     ASSERT_TRUE(test_ondemand_doc(json, [&](auto doc_result) {
       for (simdjson_unused ondemand::field field : doc_result.get_object()) {
@@ -499,7 +591,7 @@ namespace array_tests {
 
   bool iterate_empty_array_exception() {
     TEST_START();
-    auto json = "[]"_padded;
+    auto json = std::string_view("[]");
 
     ASSERT_TRUE(test_ondemand_doc(json, [&](auto doc_result) {
       for (simdjson_unused ondemand::value value : doc_result) { TEST_FAIL("Unexpected value"); }
@@ -513,6 +605,10 @@ namespace array_tests {
 
   bool run() {
     return
+           iterate_sub_array_count() &&
+           iterate_complex_array_count() &&
+           iterate_bad_array_count() &&
+           iterate_array_count() &&
            issue1588() &&
            iterate_array() &&
            iterate_document_array() &&

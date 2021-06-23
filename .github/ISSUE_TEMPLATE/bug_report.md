@@ -27,6 +27,12 @@ If we cannot reproduce the issue, then we cannot address it.
 
 Note that a stack trace from your own program is not enough.
 
+**simjson release:**
+
+Unless you plan to contribute to simdjson, you should only work from releases. Please be mindful that our main branch may have additional features, bugs and documentation items.
+
+It is fine to report bugs against our main branch, but if that is what you are doing, please be explicit.
+
 **Configuration (please complete the following information if relevant):**
  - OS: [e.g. Ubuntu 16.04.6 LTS]
  - Compiler [e.g. Apple clang version 11.0.3 (clang-1103.0.32.59) x86_64-apple-darwin19.4.0]

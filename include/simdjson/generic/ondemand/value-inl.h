@@ -95,6 +95,16 @@ simdjson_really_inline simdjson_result<array_iterator> value::begin() & noexcept
 simdjson_really_inline simdjson_result<array_iterator> value::end() & noexcept {
   return {};
 }
+simdjson_really_inline simdjson_result<size_t> value::count_elements() & noexcept {
+  simdjson_result<size_t> answer;
+  auto a = get_array();
+  answer = a.count_elements();
+  // count_elements leaves you pointing inside the array, at the first element.
+  // We need to move back so that the user can create a new array (which requires that
+  // we point at '[').
+  iter.move_at_start();
+  return answer;
+}
 
 simdjson_really_inline simdjson_result<value> value::find_field(std::string_view key) noexcept {
   return start_or_resume_object().find_field(key);
@@ -125,6 +135,20 @@ simdjson_really_inline std::string_view value::raw_json_token() noexcept {
   return std::string_view(reinterpret_cast<const char*>(iter.peek_start()), iter.peek_start_length());
 }
 
+simdjson_really_inline simdjson_result<value> value::at_pointer(std::string_view json_pointer) noexcept {
+  json_type t;
+  SIMDJSON_TRY(type().get(t));
+  switch (t)
+  {
+    case json_type::array:
+      return (*this).get_array().at_pointer(json_pointer);
+    case json_type::object:
+      return (*this).get_object().at_pointer(json_pointer);
+    default:
+      return INVALID_JSON_POINTER;
+  }
+}
+
 } // namespace ondemand
 } // namespace SIMDJSON_IMPLEMENTATION
 } // namespace simdjson
@@ -145,7 +169,10 @@ simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value>
     implementation_simdjson_result_base<SIMDJSON_IMPLEMENTATION::ondemand::value>(error)
 {
 }
-
+simdjson_really_inline simdjson_result<size_t> simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value>::count_elements() & noexcept {
+  if (error()) { return error(); }
+  return first.count_elements();
+}
 simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_iterator> simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value>::begin() & noexcept {
   if (error()) { return error(); }
   return first.begin();
@@ -281,6 +308,11 @@ simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value>
 simdjson_really_inline simdjson_result<std::string_view> simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value>::raw_json_token() noexcept {
   if (error()) { return error(); }
   return first.raw_json_token();
+}
+
+simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value> simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value>::at_pointer(std::string_view json_pointer) noexcept {
+  if (error()) { return error(); }
+  return first.at_pointer(json_pointer);
 }
 
 } // namespace simdjson

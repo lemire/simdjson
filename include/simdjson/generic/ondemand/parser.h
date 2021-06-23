@@ -21,7 +21,7 @@ public:
    *
    * The new parser will have zero capacity.
    */
-  inline parser() noexcept = default;
+  inline explicit parser(size_t max_capacity = SIMDJSON_MAXSIZE_BYTES) noexcept;
 
   inline parser(parser &&other) noexcept = default;
   simdjson_really_inline parser(const parser &other) = delete;
@@ -47,17 +47,10 @@ public:
    * iteration to ensure intermediate buffers can be accessed. Any document must be destroyed before
    * you call parse() again or destroy the parser.
    *
-   * ### REQUIRED: Buffer Padding
-   *
-   * The buffer must have at least SIMDJSON_PADDING extra allocated bytes. It does not matter what
-   * those bytes are initialized to, as long as they are allocated.
-   *
    * @param json The JSON to parse.
    * @param len The length of the JSON.
-   * @param capacity The number of bytes allocated in the JSON (must be at least len+SIMDJSON_PADDING).
    *
    * @return The document, or an error:
-   *         - INSUFFICIENT_PADDING if the input has less than SIMDJSON_PADDING extra bytes.
    *         - MEMALLOC if realloc_if_needed the parser does not have enough capacity, and memory
    *           allocation fails.
    *         - EMPTY if the document is all whitespace.
@@ -65,21 +58,20 @@ public:
    *         - UNESCAPED_CHARS if a string contains control characters that must be escaped
    *         - UNCLOSED_STRING if there is an unclosed string in the document.
    */
-  simdjson_warn_unused simdjson_result<document> iterate(padded_string_view json) & noexcept;
-  /** @overload simdjson_result<document> iterate(padded_string_view json) & noexcept */
-  simdjson_warn_unused simdjson_result<document> iterate(const char *json, size_t len, size_t capacity) & noexcept;
-  /** @overload simdjson_result<document> iterate(padded_string_view json) & noexcept */
-  simdjson_warn_unused simdjson_result<document> iterate(const uint8_t *json, size_t len, size_t capacity) & noexcept;
-  /** @overload simdjson_result<document> iterate(padded_string_view json) & noexcept */
-  simdjson_warn_unused simdjson_result<document> iterate(std::string_view json, size_t capacity) & noexcept;
-  /** @overload simdjson_result<document> iterate(padded_string_view json) & noexcept */
+  simdjson_warn_unused simdjson_result<document> iterate(std::string_view json) & noexcept;
+  /** @overload simdjson_result<document> iterate(std::string_view json) & noexcept */
+  simdjson_warn_unused simdjson_result<document> iterate(const char *json, size_t len) & noexcept;
+  /** @overload simdjson_result<document> iterate(std::string_view json) & noexcept */
+  simdjson_warn_unused simdjson_result<document> iterate(const uint8_t *json, size_t len) & noexcept;
+  /** @overload simdjson_result<document> iterate(std::string_view json) & noexcept */
   simdjson_warn_unused simdjson_result<document> iterate(const std::string &json) & noexcept;
-  /** @overload simdjson_result<document> iterate(padded_string_view json) & noexcept */
+  /** @overload simdjson_result<document> iterate(std::string_view json) & noexcept */
   simdjson_warn_unused simdjson_result<document> iterate(const simdjson_result<padded_string> &json) & noexcept;
-  /** @overload simdjson_result<document> iterate(padded_string_view json) & noexcept */
+  /** @overload simdjson_result<document> iterate(std::string_view json) & noexcept */
   simdjson_warn_unused simdjson_result<document> iterate(const simdjson_result<padded_string_view> &json) & noexcept;
-  /** @overload simdjson_result<document> iterate(padded_string_view json) & noexcept */
-  simdjson_warn_unused simdjson_result<document> iterate(padded_string &&json) & noexcept = delete;
+  // Make sure people pass capacity in some capacity
+  simdjson_warn_unused simdjson_result<document> iterate(const char *json) & noexcept = delete;
+  simdjson_warn_unused simdjson_result<document> iterate(const uint8_t *json) & noexcept = delete;
 
   /**
    * @private
@@ -100,17 +92,9 @@ public:
    * iteration to ensure intermediate buffers can be accessed. Any document must be destroyed before
    * you call parse() again or destroy the parser.
    *
-   * ### REQUIRED: Buffer Padding
-   *
-   * The buffer must have at least SIMDJSON_PADDING extra allocated bytes. It does not matter what
-   * those bytes are initialized to, as long as they are allocated.
-   *
    * @param json The JSON to parse.
-   * @param len The length of the JSON.
-   * @param allocated The number of bytes allocated in the JSON (must be at least len+SIMDJSON_PADDING).
    *
    * @return The iterator, or an error:
-   *         - INSUFFICIENT_PADDING if the input has less than SIMDJSON_PADDING extra bytes.
    *         - MEMALLOC if realloc_if_needed the parser does not have enough capacity, and memory
    *           allocation fails.
    *         - EMPTY if the document is all whitespace.
@@ -118,22 +102,15 @@ public:
    *         - UNESCAPED_CHARS if a string contains control characters that must be escaped
    *         - UNCLOSED_STRING if there is an unclosed string in the document.
    */
-  simdjson_warn_unused simdjson_result<json_iterator> iterate_raw(padded_string_view json) & noexcept;
+  simdjson_warn_unused simdjson_result<json_iterator> iterate_raw(std::string_view json) & noexcept;
 
   /** The capacity of this parser (the largest document it can process). */
   simdjson_really_inline size_t capacity() const noexcept;
+  /** The maximum capacity of this parser (the largest document it is allowed to process). */
+  simdjson_really_inline size_t max_capacity() const noexcept;
+  simdjson_really_inline void set_max_capacity(size_t max_capacity) noexcept;
   /** The maximum depth of this parser (the most deeply nested objects and arrays it can process). */
   simdjson_really_inline size_t max_depth() const noexcept;
-
-private:
-  /** @private [for benchmarking access] The implementation to use */
-  std::unique_ptr<internal::dom_parser_implementation> implementation{};
-  size_t _capacity{0};
-  size_t _max_depth{DEFAULT_MAX_DEPTH};
-  std::unique_ptr<uint8_t[]> string_buf{};
-#ifdef SIMDJSON_DEVELOPMENT_CHECKS
-  std::unique_ptr<token_position[]> start_positions{};
-#endif
 
   /**
    * Ensure this parser has enough memory to process JSON documents up to `capacity` bytes in length
@@ -144,6 +121,17 @@ private:
    * @return The error, if there is one.
    */
   simdjson_warn_unused error_code allocate(size_t capacity, size_t max_depth=DEFAULT_MAX_DEPTH) noexcept;
+
+private:
+  /** @private [for benchmarking access] The implementation to use */
+  std::unique_ptr<internal::dom_parser_implementation> implementation{};
+  size_t _capacity{0};
+  size_t _max_capacity;
+  size_t _max_depth{DEFAULT_MAX_DEPTH};
+  std::unique_ptr<uint8_t[]> string_buf{};
+#ifdef SIMDJSON_DEVELOPMENT_CHECKS
+  std::unique_ptr<token_position[]> start_positions{};
+#endif
 
   friend class json_iterator;
 };

@@ -1,0 +1,21 @@
+name: VS16-ARM-CI
+
+on: [push, pull_request]
+
+jobs:
+   ci:
+     name: windows-vs16
+     runs-on: windows-latest
+     strategy:
+       fail-fast: false
+       matrix:
+         include:
+           - {arch: ARM}
+           - {arch: ARM64}
+     steps:
+       - name: checkout
+         uses: actions/checkout@v2
+       - name: Use cmake
+         run: |
+           cmake -A ${{ matrix.arch }} -DCMAKE_CROSSCOMPILING=1 -DSIMDJSON_DEVELOPER_MODE=ON -D SIMDJSON_GOOGLE_BENCHMARKS=OFF -DSIMDJSON_EXCEPTIONS=OFF -B build  &&
+           cmake --build build --verbose

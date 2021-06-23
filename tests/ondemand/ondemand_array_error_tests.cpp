@@ -95,8 +95,6 @@ namespace array_error_tests {
     ONDEMAND_SUBTEST("unclosed extra comma", R"({ "a": [,,)", assert_iterate(doc["a"],                 { INCORRECT_TYPE, INCORRECT_TYPE, TAPE_ERROR }));
   #endif
     ONDEMAND_SUBTEST("unclosed     ", R"({ "a": [1 )",        assert_iterate(doc["a"], { int64_t(1) }, { TAPE_ERROR }));
-    // TODO These pass the user values that may run past the end of the buffer if they aren't careful
-    // In particular, if the padding is decorated with the wrong values, we could cause overrun!
   #if __SIMDJSON_CHECK_EOF
     ONDEMAND_SUBTEST("unclosed     ", R"({ "a": [1,)",        assert_iterate(doc["a"], { int64_t(1) }, { TAPE_ERROR }));
   #else
@@ -114,7 +112,7 @@ namespace array_error_tests {
 #ifdef SIMDJSON_DEVELOPMENT_CHECKS
   bool out_of_order_array_iteration_error() {
     TEST_START();
-    auto json = R"([ [ 1, 2 ] ])"_padded;
+    auto json = std::string_view(R"([ [ 1, 2 ] ])");
     SUBTEST("simdjson_result<value>", test_ondemand_doc(json, [&](auto doc) {
       for (auto arr : doc) {
         for (auto subelement : arr) { ASSERT_SUCCESS(subelement); }
@@ -153,7 +151,7 @@ namespace array_error_tests {
 
   bool out_of_order_top_level_array_iteration_error() {
     TEST_START();
-    auto json = R"([ 1, 2 ])"_padded;
+    auto json = std::string_view(R"([ 1, 2 ])");
     SUBTEST("simdjson_result<document>", test_ondemand_doc(json, [&](auto arr) {
       for (auto element : arr) { ASSERT_SUCCESS(element); }
       ASSERT_ITERATE_ERROR( arr, OUT_OF_ORDER_ITERATION );

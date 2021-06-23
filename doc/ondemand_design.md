@@ -709,6 +709,42 @@ in production systems:
     }
 ```
 
+
+### Long-Running Processes and Memory Capacity
+
+The On Demand approach also automatically expands its memory capacity when larger documents are parsed. However, for longer processes where very large files are processed (such as server loops), this capacity is not resized down. Similarly to the DOM-based approach (see [here](https://github.com/simdjson/simdjson/blob/master/doc/dom.md#server-loops-long-running-processes-and-memory-capacity)]), On Demand also lets you adjust the maximal capacity that the parser can process:
+
+* You can set an upper bound (*max_capacity*) when construction the parser:
+```C++
+    ondemand::parser parser(1000*1000);  // Never grows past documents > 1 MB
+    auto doc = parser.iterate(json);
+    for (web_request request : listen()) {
+      padded_string json;
+      padded_string json = padded_string::load(request.body);
+      auto error = parser.iterate(json);
+      // If the document was above our limit, emit 413 = payload too large
+      if (error == CAPACITY) { request.respond(413); continue; }
+      // ...
+    }
+```
+
+The capacity will grow as the parser encounters larger documents up to 1 MB.
+
+* You can also allocate a *fixed capacity* that will never grow:
+```C++
+    ondemand::parser parser(1000*1000);
+    parser.allocate(1000*1000)  // Fix the capacity to 1 MB
+    auto doc = parser.iterate(json);
+    for (web_request request : listen()) {
+      padded_string json;
+      padded_string json = padded_string::load(request.body);
+      auto error = parser.iterate(json);
+      // If the document was above our limit, emit 413 = payload too large
+      if (error == CAPACITY) { request.respond(413); continue; }
+      // ...
+    }
+```
+You can also manually set the maximal capacity using the method `set_max_capacity()`.
 ### Benefits of the On Demand Approach
 
 We expect that the On Demand approach has many of the performance benefits of the schema-based approach, while providing a flexibility that is similar to that of the DOM-based approach.

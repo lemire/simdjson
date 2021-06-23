@@ -25,8 +25,8 @@ namespace number_tests {
   bool powers_of_two() {
     std::cout << __func__ << std::endl;
 
-    // converts the double "expected" to a padded string
-    auto format_into_padded=[](const double expected) -> padded_string
+    // converts the double "expected" to a string
+    auto format_into_string=[](const double expected) -> std::string
     {
       std::vector<char> buf(1024);
       const auto n = std::snprintf(buf.data(),
@@ -36,12 +36,12 @@ namespace number_tests {
                                expected);
       const auto nz=static_cast<size_t>(n);
       if (n<0 || nz >= buf.size()) { std::abort(); }
-      return padded_string(buf.data(), nz);
+      return std::string(buf.data(), nz);
     };
 
     for (int i = -1075; i < 1024; ++i) {// large negative values should be zero.
       const double expected = std::pow(2, i);
-      const auto buf=format_into_padded(expected);
+      const auto buf=format_into_string(expected);
       std::fflush(nullptr);
       if(!test_ondemand<double>(buf,
                                 [&](double actual) {
@@ -147,7 +147,7 @@ namespace number_tests {
       std::fflush(nullptr);
       const double expected = ((i >= -307) ? testing_power_of_ten[i + 307]: std::pow(10, i));
 
-      if(!test_ondemand<double>(padded_string(buf.data(), n), [&](double actual) {
+      if(!test_ondemand<double>(std::string_view(buf.data(), n), [&](double actual) {
                                 if(actual!=expected) {
                                   std::cerr << "JSON '" << buf.data() << " parsed to ";
                                   std::fprintf( stderr," %18.18g instead of %18.18g\n", actual, expected); // formatting numbers is easier with printf
@@ -164,7 +164,7 @@ namespace number_tests {
   }
 
   void github_issue_1273() {
-    padded_string bad(std::string_view("0.0300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000024000000000000000000000000000000000000000000000000000000000000122978293824"));
+    std::string_view bad("0.0300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000024000000000000000000000000000000000000000000000000000000000000122978293824");
     simdjson::ondemand::parser parser;
     simdjson_unused auto blah=parser.iterate(bad);
     double x;

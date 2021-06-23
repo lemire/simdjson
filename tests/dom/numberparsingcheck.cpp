@@ -167,7 +167,6 @@ void found_float(double result, const uint8_t *buf) {
 #endif
 
 #include "simdjson.h"
-#include "simdjson.cpp"
 
 /**
  * Does the file filename ends with the given extension.

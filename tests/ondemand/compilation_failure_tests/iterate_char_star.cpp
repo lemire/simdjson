@@ -7,9 +7,9 @@ int main() {
     ondemand::parser parser;
 #if COMPILATION_TEST_USE_FAILING_CODE
     const char* json;
-    auto doc = parser.iterate(json, strlen(json));
+    auto doc = parser.iterate(json);
 #else
-    auto json = "1"_padded;
+    auto json = std::string_view("1");
     auto doc = parser.iterate(json);
 #endif
     int64_t value;

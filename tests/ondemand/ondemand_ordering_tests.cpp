@@ -8,7 +8,7 @@ namespace ordering_tests {
 
 #if SIMDJSON_EXCEPTIONS
 
-  auto json = "{\"coordinates\":[{\"x\":1.1,\"y\":2.2,\"z\":3.3}]}"_padded;
+  auto json = std::string_view("{\"coordinates\":[{\"x\":1.1,\"y\":2.2,\"z\":3.3}]}");
 
   bool in_order_object_index() {
     TEST_START();
@@ -133,7 +133,7 @@ namespace ordering_tests {
   bool use_object_multiple_times_out_of_order() {
     TEST_START();
     ondemand::parser parser{};
-    auto json2 = "{\"coordinates\":{\"x\":1.1,\"y\":2.2,\"z\":3.3}}"_padded;
+    auto json2 = std::string_view("{\"coordinates\":{\"x\":1.1,\"y\":2.2,\"z\":3.3}}");
     auto doc = parser.iterate(json2);
     auto x = doc["coordinates"]["x"];
     auto y = doc["coordinates"]["y"];

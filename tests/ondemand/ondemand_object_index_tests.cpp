@@ -9,7 +9,7 @@ namespace object_tests {
 
   bool object_index() {
     TEST_START();
-    auto json = R"({ "a": 1, "b": 2, "c/d": 3})"_padded;
+    auto json = std::string_view(R"({ "a": 1, "b": 2, "c/d": 3})");
     SUBTEST("ondemand::object", test_ondemand_doc(json, [&](auto doc_result) {
       ondemand::object object;
       ASSERT_SUCCESS( doc_result.get(object) );
@@ -39,7 +39,7 @@ namespace object_tests {
 
   bool document_object_index() {
     TEST_START();
-    auto json = R"({ "a": 1, "b": 2, "c/d": 3})"_padded;
+    auto json = std::string_view(R"({ "a": 1, "b": 2, "c/d": 3})");
     SUBTEST("ondemand::document", test_ondemand_doc(json, [&](auto doc_result) {
       ondemand::document doc;
       ASSERT_SUCCESS( std::move(doc_result).get(doc) );
@@ -65,7 +65,7 @@ namespace object_tests {
 
   bool value_object_index() {
     TEST_START();
-    auto json = R"({ "outer": { "a": 1, "b": 2, "c/d": 3 } })"_padded;
+    auto json = std::string_view(R"({ "outer": { "a": 1, "b": 2, "c/d": 3 } })");
     SUBTEST("ondemand::value", test_ondemand_doc(json, [&](auto doc_result) {
       ondemand::value object;
       ASSERT_SUCCESS( doc_result["outer"].get(object) );
@@ -92,7 +92,7 @@ namespace object_tests {
 
   bool document_nested_object_index() {
     TEST_START();
-    auto json = R"({ "x": { "y": { "z": 2 } } }})"_padded;
+    auto json = std::string_view(R"({ "x": { "y": { "z": 2 } } }})");
     SUBTEST("simdjson_result<ondemand::document>", test_ondemand_doc(json, [&](auto doc_result) {
       ASSERT_EQUAL( doc_result["x"]["y"]["z"].get_uint64().value_unsafe(), 2 );
       return true;
@@ -108,7 +108,7 @@ namespace object_tests {
 
   bool nested_object_index() {
     TEST_START();
-    auto json = R"({ "x": { "y": { "z": 2 } } }})"_padded;
+    auto json = std::string_view(R"({ "x": { "y": { "z": 2 } } }})");
     SUBTEST("simdjson_result<ondemand::object>", test_ondemand_doc(json, [&](auto doc_result) {
       simdjson_result<ondemand::object> object = doc_result.get_object();
       ASSERT_EQUAL( object["x"]["y"]["z"].get_uint64().value_unsafe(), 2 );
@@ -125,7 +125,7 @@ namespace object_tests {
 
   bool value_nested_object_index() {
     TEST_START();
-    auto json = R"({ "x": { "y": { "z": 2 } } }})"_padded;
+    auto json = std::string_view(R"({ "x": { "y": { "z": 2 } } }})");
     SUBTEST("simdjson_result<ondemand::value>", test_ondemand_doc(json, [&](auto doc_result) {
       simdjson_result<ondemand::value> x = doc_result["x"];
       ASSERT_EQUAL( x["y"]["z"].get_uint64().value_unsafe(), 2 );
@@ -142,7 +142,7 @@ namespace object_tests {
 
   bool object_index_partial_children() {
     TEST_START();
-    auto json = R"(
+    std::string_view json = R"(
       {
         "scalar_ignore":       0,
         "empty_array_ignore":  [],
@@ -156,7 +156,7 @@ namespace object_tests {
         "quadruple_nested_break": { "a": [ { "b": [ 9, 99 ], "c": 999 }, 9999 ], "d": 99999 },
         "actual_value": 10
       }
-    )"_padded;
+    )";
     SUBTEST("ondemand::object", test_ondemand_doc(json, [&](auto doc_result) {
       ondemand::object object;
       ASSERT_SUCCESS( doc_result.get(object) );
@@ -385,7 +385,7 @@ namespace object_tests {
 
   bool object_index_exception() {
     TEST_START();
-    auto json = R"({ "a": 1, "b": 2, "c/d": 3})"_padded;
+    auto json = std::string_view(R"({ "a": 1, "b": 2, "c/d": 3})");
     SUBTEST("ondemand::object", test_ondemand_doc(json, [&](auto doc_result) {
       ondemand::object object = doc_result;
 
@@ -399,7 +399,7 @@ namespace object_tests {
   }
   bool nested_object_index_exception() {
     TEST_START();
-    auto json = R"({ "x": { "y": { "z": 2 } } }})"_padded;
+    auto json = std::string_view(R"({ "x": { "y": { "z": 2 } } }})");
     SUBTEST("simdjson_result<ondemand::document>", test_ondemand_doc(json, [&](auto doc_result) {
       ASSERT_EQUAL( uint64_t(doc_result["x"]["y"]["z"]), 2 );
       return true;

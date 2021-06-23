@@ -24,7 +24,7 @@ jobs:
         run: |
           mkdir build &&
           cd build &&
-          cmake  -DSIMDJSON_GOOGLE_BENCHMARKS=ON -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX:PATH=destination ..  &&
+          cmake  -DSIMDJSON_DEVELOPER_MODE=ON -DSIMDJSON_GOOGLE_BENCHMARKS=ON -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX:PATH=destination ..  &&
           cmake --build .   &&
           ctest -j --output-on-failure -LE explicitonly   &&
           make install  &&

@@ -344,7 +344,7 @@ error_code slow_float_parsing(const uint8_t * src, const uint8_t * const end, W 
 
 simdjson_really_inline bool at_end(const uint8_t * const p, const uint8_t * const end) {
   return end != nullptr && p >= end;
-} 
+}
 
 template<typename I>
 NO_SANITIZE_UNDEFINED // We deliberately allow overflow here and check later

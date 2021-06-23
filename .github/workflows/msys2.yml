@@ -52,6 +52,6 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DBUILD_SHARED_LIBS=OFF -DSIMDJSON_DO_NOT_USE_THREADS_NO_MATTER_WHAT=ON ..
+          cmake -DSIMDJSON_DEVELOPER_MODE=ON -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DBUILD_SHARED_LIBS=OFF -DSIMDJSON_DO_NOT_USE_THREADS_NO_MATTER_WHAT=ON ..
           cmake --build . --verbose
           ctest -j4 --output-on-failure -LE explicitonly

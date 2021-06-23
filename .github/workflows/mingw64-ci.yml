@@ -63,12 +63,12 @@ jobs:
           git --version
           mkdir build64
           cd build64
-          cmake -DBUILD_SHARED_LIBS=OFF -DSIMDJSON_COMPETITION=OFF -DSIMDJSON_GOOGLE_BENCHMARKS=OFF -DSIMDJSON_ENABLE_THREADS=OFF ..
+          cmake -DSIMDJSON_DEVELOPER_MODE=ON -DBUILD_SHARED_LIBS=OFF -DSIMDJSON_COMPETITION=OFF -DSIMDJSON_GOOGLE_BENCHMARKS=OFF -DSIMDJSON_ENABLE_THREADS=OFF ..
           cmake --build . --target acceptance_tests --verbose
           ctest -L acceptance --output-on-failure
           cd ..
           mkdir build64debug
           cd build64debug
-          cmake -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=OFF -DSIMDJSON_COMPETITION=OFF -DSIMDJSON_GOOGLE_BENCHMARKS=OFF -DSIMDJSON_ENABLE_THREADS=OFF ..
+          cmake -DSIMDJSON_DEVELOPER_MODE=ON -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=OFF -DSIMDJSON_COMPETITION=OFF -DSIMDJSON_GOOGLE_BENCHMARKS=OFF -DSIMDJSON_ENABLE_THREADS=OFF ..
           cmake --build . --target acceptance_tests --verbose
           ctest -L acceptance --output-on-failure

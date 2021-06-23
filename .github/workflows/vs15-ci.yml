@@ -28,7 +28,7 @@ jobs:
       uses: actions/checkout@v2
     - name: Configure
       run: |
-        cmake -G "${{matrix.gen}}" -A ${{matrix.arch}} -DSIMDJSON_COMPETITION=OFF -DSIMDJSON_BUILD_STATIC=${{matrix.static}} -B build
+        cmake -G "${{matrix.gen}}" -A ${{matrix.arch}} -DSIMDJSON_COMPETITION=OFF -DSIMDJSON_DEVELOPER_MODE=ON -DSIMDJSON_BUILD_STATIC=${{matrix.static}} -B build
     - name: Build Debug
       run: cmake --build build --config Debug --verbose
     - name: Build Release

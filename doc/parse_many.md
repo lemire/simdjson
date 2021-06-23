@@ -177,7 +177,8 @@ Let us illustrate the idea with code:
     auto json = R"([1,2,3]  {"1":1,"2":3,"4":4} [1,2,3]  )"_padded;
     simdjson::dom::parser parser;
     simdjson::dom::document_stream stream;
-    ASSERT_SUCCESS( parser.parse_many(json).get(stream) );
+    auto error = parser.parse_many(json).get(stream);
+    if( error ) { /* do something */ }
     auto i = stream.begin();
     for(; i != stream.end(); ++i) {
         auto doc = *i;

@@ -18,11 +18,11 @@ simdjson_never_inline bool check_point(simdjson_result<ondemand::value> xval, si
 }
 
 bool test_check_point() {
-  auto json = R"(
+  auto json = std::string_view(R"(
     {
       "x": 1,
       "y": 2 3
-  )"_padded;
+  )");
   ondemand::parser parser;
   auto doc = parser.iterate(json);
   return check_point(doc["x"], doc["y"]);

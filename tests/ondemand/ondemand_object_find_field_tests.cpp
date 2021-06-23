@@ -9,7 +9,7 @@ namespace object_tests {
 
   bool object_find_field_unordered() {
     TEST_START();
-    auto json = R"({ "a": 1, "b": 2, "c/d": 3})"_padded;
+    auto json = std::string_view(R"({ "a": 1, "b": 2, "c/d": 3})");
     SUBTEST("ondemand::object", test_ondemand_doc(json, [&](auto doc_result) {
       ondemand::object object;
       ASSERT_SUCCESS( doc_result.get(object) );
@@ -39,7 +39,7 @@ namespace object_tests {
 
   bool document_object_find_field_unordered() {
     TEST_START();
-    auto json = R"({ "a": 1, "b": 2, "c/d": 3})"_padded;
+    auto json = std::string_view(R"({ "a": 1, "b": 2, "c/d": 3})");
     SUBTEST("ondemand::document", test_ondemand_doc(json, [&](auto doc_result) {
       ondemand::document doc;
       ASSERT_SUCCESS( std::move(doc_result).get(doc) );
@@ -65,7 +65,7 @@ namespace object_tests {
 
   bool value_object_find_field_unordered() {
     TEST_START();
-    auto json = R"({ "outer": { "a": 1, "b": 2, "c/d": 3 } })"_padded;
+    auto json = std::string_view(R"({ "outer": { "a": 1, "b": 2, "c/d": 3 } })");
     SUBTEST("ondemand::value", test_ondemand_doc(json, [&](auto doc_result) {
       ondemand::value object;
       ASSERT_SUCCESS( doc_result.find_field_unordered("outer").get(object) );
@@ -92,7 +92,7 @@ namespace object_tests {
 
   bool object_find_field() {
     TEST_START();
-    auto json = R"({ "a": 1, "b": 2, "c/d": 3})"_padded;
+    auto json = std::string_view(R"({ "a": 1, "b": 2, "c/d": 3})");
     SUBTEST("ondemand::object", test_ondemand_doc(json, [&](auto doc_result) {
       ondemand::object object;
       ASSERT_SUCCESS( doc_result.get(object) );
@@ -122,7 +122,7 @@ namespace object_tests {
 
   bool document_object_find_field() {
     TEST_START();
-    auto json = R"({ "a": 1, "b": 2, "c/d": 3})"_padded;
+    auto json = std::string_view(R"({ "a": 1, "b": 2, "c/d": 3})");
     SUBTEST("ondemand::document", test_ondemand_doc(json, [&](auto doc_result) {
       ondemand::document doc;
       ASSERT_SUCCESS( std::move(doc_result).get(doc) );
@@ -148,7 +148,7 @@ namespace object_tests {
 
   bool value_object_find_field() {
     TEST_START();
-    auto json = R"({ "outer": { "a": 1, "b": 2, "c/d": 3 } })"_padded;
+    auto json = std::string_view(R"({ "outer": { "a": 1, "b": 2, "c/d": 3 } })");
     SUBTEST("ondemand::value", test_ondemand_doc(json, [&](auto doc_result) {
       ondemand::value object;
       ASSERT_SUCCESS( doc_result.find_field("outer").get(object) );

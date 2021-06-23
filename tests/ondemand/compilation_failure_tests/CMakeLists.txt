@@ -15,6 +15,4 @@ endfunction(add_dual_compile_test)
 
 
 add_dual_compile_test(iterate_char_star)
-add_dual_compile_test(iterate_string_view)
-add_dual_compile_test(iterate_temporary_buffer)
 add_dual_compile_test(padded_string_view_char_star_no_capacity)

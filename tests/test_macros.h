@@ -107,8 +107,8 @@ simdjson_really_inline bool assert_iterate_error(T &arr, simdjson::error_code ex
   }
   return assert_equal( count, 1, operation );
 }
-#define TEST_START()                    do { std::cout << "Running " << __func__ << " ..." << std::endl; } while(0);
-#define SUBTEST(NAME, TEST)             do { std::cout << "- Subtest " << (NAME) << " ..." << std::endl; if (!(TEST)) { return false; } } while (0);
+#define TEST_START()                    do { std::cout << "> Running " << __func__ << " ..." << std::endl; } while(0);
+#define SUBTEST(NAME, TEST)             do { std::cout << " - Subtest " << (NAME) << " ..." << std::endl; if (!(TEST)) { return false; } } while (0);
 #define ASSERT_EQUAL(ACTUAL, EXPECTED)  do { if (!::assert_equal  ((ACTUAL), (EXPECTED), #ACTUAL)) { return false; } } while (0);
 #define ASSERT_RESULT(ACTUAL, EXPECTED) do { if (!::assert_result ((ACTUAL), (EXPECTED), #ACTUAL)) { return false; } } while (0);
 #define ASSERT_SUCCESS(ACTUAL)          do { if (!::assert_success((ACTUAL),             #ACTUAL)) { return false; } } while (0);

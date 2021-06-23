@@ -13,7 +13,7 @@ void process3(int ) {}
 
 // Do not run this, it is only meant to compile
 void compilation_test_1() {
-  const padded_string bogus = ""_padded;
+  const std::string_view bogus = "";
   ondemand::parser parser;
   auto doc = parser.iterate(bogus);
   for (ondemand::object my_object : doc["mykey"]) {
@@ -27,7 +27,7 @@ void compilation_test_1() {
 
 // Do not run this, it is only meant to compile
  void compilation_test_2() {
-  const padded_string bogus = ""_padded;
+  const std::string_view bogus = "";
   ondemand::parser parser;
   auto doc = parser.iterate(bogus);
   std::set<std::string_view> default_users;
@@ -44,7 +44,7 @@ void compilation_test_1() {
 
 // Do not run this, it is only meant to compile
 void compilation_test_3() {
-  const padded_string bogus = ""_padded;
+  const std::string_view bogus = "";
   ondemand::parser parser;
   auto doc = parser.iterate(bogus);
   ondemand::array tweets;

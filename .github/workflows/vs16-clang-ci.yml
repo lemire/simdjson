@@ -29,7 +29,7 @@ jobs:
         buildDirectory: "${{ github.workspace }}/../../_temp/windows"
         cmakeBuildType: Release
         buildWithCMake: true
-        cmakeAppendedArgs:  -T ClangCL -DSIMDJSON_COMPETITION=OFF  -DBUILD_SHARED_LIBS=OFF
+        cmakeAppendedArgs:  -T ClangCL -DSIMDJSON_COMPETITION=OFF -DSIMDJSON_DEVELOPER_MODE=ON -DBUILD_SHARED_LIBS=OFF
         buildWithCMakeArgs: --config Release
     
     - name: 'Run CTest'

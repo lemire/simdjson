@@ -15,7 +15,7 @@ int main() {
     auto json = std::string_view("1");
     auto doc = parser.iterate(json);
 #else
-    auto json = "1"_padded;
+    auto json = std::string_view("1");
     auto doc = parser.iterate(json);
 #endif
     int64_t value;

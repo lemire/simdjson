@@ -27,7 +27,7 @@ jobs:
         cmakeBuildType: Release
         buildWithCMake: true
         cmakeGenerator: VS16Win64
-        cmakeAppendedArgs: -DSIMDJSON_COMPETITION=OFF  -DSIMDJSON_EXCEPTIONS=OFF
+        cmakeAppendedArgs: -DSIMDJSON_COMPETITION=OFF -DSIMDJSON_DEVELOPER_MODE=ON  -DSIMDJSON_EXCEPTIONS=OFF
         buildWithCMakeArgs: --config Release
 
     - name: 'Run CTest'

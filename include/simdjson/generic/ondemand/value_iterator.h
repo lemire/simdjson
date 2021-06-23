@@ -282,11 +282,17 @@ public:
   simdjson_really_inline bool is_valid() const noexcept;
 
   /** @} */
-
 protected:
-
+  /* updates the index so that at_start() is true and syncs the depth. */
+   simdjson_really_inline void move_at_start() noexcept;
+  /**
+   * enter_at_container_start is similar to move_at_start()
+   * except that it sets the depth to indicate that we are inside the
+   * container and then it accesses the first element
+   **/
+  simdjson_really_inline void enter_at_container_start() noexcept;
   /* Useful for debugging and logging purposes. */
-   inline std::string to_string() const noexcept;
+  inline std::string to_string() const noexcept;
   simdjson_really_inline value_iterator(json_iterator *json_iter, depth_t depth, token_position start_index) noexcept;
 
   simdjson_really_inline bool parse_null(uint32_t max_len, const uint8_t *json) const noexcept;

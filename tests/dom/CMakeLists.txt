@@ -1,26 +1,4 @@
 
-#
-# These tests explicitly do #include "simdjson.cpp" so they can override stuff
-#
-if(NOT SIMDJSON_LEGACY_VISUAL_STUDIO AND NOT SIMDJSON_WINDOWS_DLL)
-  add_cpp_test(numberparsingcheck LABELS acceptance per_implementation)
-  simdjson_apply_props(numberparsingcheck)
-  target_link_libraries(numberparsingcheck PRIVATE simdjson-windows-headers)
-  target_compile_definitions(numberparsingcheck PRIVATE NOMINMAX)
-  target_include_directories(
-      numberparsingcheck
-      PRIVATE "${PROJECT_SOURCE_DIR}/src"
-  )
-  add_cpp_test(stringparsingcheck LABELS acceptance per_implementation)
-  simdjson_apply_props(numberparsingcheck)
-  target_link_libraries(stringparsingcheck PRIVATE simdjson-windows-headers)
-  target_compile_definitions(stringparsingcheck PRIVATE NOMINMAX)
-  target_include_directories(
-      stringparsingcheck
-      PRIVATE "${PROJECT_SOURCE_DIR}/src"
-  )
-endif()
-
 link_libraries(simdjson)
 include_directories(..)
 
@@ -35,8 +13,10 @@ add_cpp_test(extracting_values_example  LABELS dom acceptance per_implementation
 add_cpp_test(integer_tests              LABELS dom acceptance per_implementation)
 add_cpp_test(jsoncheck                  LABELS dom acceptance per_implementation)
 add_cpp_test(minefieldcheck             LABELS dom acceptance per_implementation)
+add_cpp_test(numberparsingcheck         LABELS dom acceptance per_implementation) # https://tools.ietf.org/html/rfc6901
 add_cpp_test(parse_many_test            LABELS dom acceptance per_implementation)
 add_cpp_test(pointercheck               LABELS dom acceptance per_implementation) # https://tools.ietf.org/html/rfc6901
+add_cpp_test(stringparsingcheck         LABELS dom acceptance per_implementation) # https://tools.ietf.org/html/rfc6901
 add_cpp_test(trivially_copyable_test    LABELS dom acceptance per_implementation)
 
 

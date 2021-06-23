@@ -31,7 +31,7 @@ jobs:
           ./alpine.sh apk add build-base cmake g++ linux-headers git bash
       - name: cmake
         run: |
-          ./alpine.sh cmake -B build_for_alpine
+          ./alpine.sh cmake -DSIMDJSON_DEVELOPER_MODE=ON -B build_for_alpine
       - name: build
         run: |
           ./alpine.sh cmake --build build_for_alpine

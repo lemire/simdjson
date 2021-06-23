@@ -24,6 +24,6 @@ jobs:
         run: |
           mkdir build &&
           cd build &&
-          cmake  -DSIMDJSON_ENABLE_DOM_CHECKPERF=ON -DSIMDJSON_GOOGLE_BENCHMARKS=ON -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX:PATH=destination ..  &&
+          cmake  -DSIMDJSON_DEVELOPER_MODE=ON -DSIMDJSON_ENABLE_DOM_CHECKPERF=ON -DSIMDJSON_GOOGLE_BENCHMARKS=ON -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX:PATH=destination ..  &&
           cmake --build . --target checkperf  &&
           ctest --output-on-failure -R checkperf  ubuntu18-checkperf.yml

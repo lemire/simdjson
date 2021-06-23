@@ -8,7 +8,7 @@ namespace misc_tests {
   simdjson_warn_unused bool big_integer() {
     TEST_START();
     simdjson::ondemand::parser parser;
-    simdjson::padded_string docdata =  R"({"value":12321323213213213213213213213211223})"_padded;
+    std::string_view docdata =  R"({"value":12321323213213213213213213213211223})";
     simdjson::ondemand::document doc;
     ASSERT_SUCCESS(parser.iterate(docdata).get(doc));
     simdjson::ondemand::object o;
@@ -21,7 +21,7 @@ namespace misc_tests {
   simdjson_warn_unused bool big_integer_in_string() {
     TEST_START();
     simdjson::ondemand::parser parser;
-    simdjson::padded_string docdata =  R"({"value":"12321323213213213213213213213211223"})"_padded;
+    std::string_view docdata =  R"({"value":"12321323213213213213213213213211223"})";
     simdjson::ondemand::document doc;
     ASSERT_SUCCESS(parser.iterate(docdata).get(doc));
     simdjson::ondemand::object o;
@@ -35,13 +35,12 @@ namespace misc_tests {
     string title = "'";
     title.append(json.data(), json.length());
     title += "'";
-    padded_string json_padded = json;
-    SUBTEST(title, test_ondemand_doc(json_padded, [&](auto doc) {
+    SUBTEST(title, test_ondemand_doc(json, [&](auto doc) {
       string_view token;
       ASSERT_SUCCESS( doc.raw_json_token().get(token) );
       ASSERT_EQUAL( token, expected_token );
       // Validate the text is inside the original buffer
-      ASSERT_EQUAL( reinterpret_cast<const void*>(token.data()), reinterpret_cast<const void*>(&json_padded.data()[expected_start_index]));
+      ASSERT_EQUAL( reinterpret_cast<const void*>(token.data()), reinterpret_cast<const void*>(&json.data()[expected_start_index]));
       return true;
     }));
 
@@ -49,17 +48,16 @@ namespace misc_tests {
     auto json_in_hash = string(R"({"a":)");
     json_in_hash.append(json.data(), json.length());
     json_in_hash += "}";
-    json_padded = json_in_hash;
     title = "'";
     title.append(json_in_hash.data(), json_in_hash.length());
     title += "'";
-    SUBTEST(title, test_ondemand_doc(json_padded, [&](auto doc) {
+    SUBTEST(title, test_ondemand_doc(json_in_hash, [&](auto doc) {
       string_view token;
       ASSERT_SUCCESS( doc["a"].raw_json_token().get(token) );
       ASSERT_EQUAL( token, expected_token );
       // Validate the text is inside the original buffer
       // Adjust for the {"a":
-      ASSERT_EQUAL( reinterpret_cast<const void*>(token.data()), reinterpret_cast<const void*>(&json_padded.data()[5+expected_start_index]));
+      ASSERT_EQUAL( reinterpret_cast<const void*>(token.data()), reinterpret_cast<const void*>(&json_in_hash.data()[5+expected_start_index]));
       return true;
     }));
 

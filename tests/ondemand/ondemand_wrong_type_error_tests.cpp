@@ -11,7 +11,7 @@ namespace wrong_type_error_tests {
   { \
     /* Put padding into the string to check the buffer overrun code as well */ \
     auto doc_json = std::string(JSON) + "1111111111111111111111111111111111111111111111111111111111111111"; \
-    if (!test_ondemand_doc(padded_string_view(doc_json.data(), strlen(JSON), doc_json.length()), [&](auto doc_result) { \
+    if (!test_ondemand_doc(doc_json, [&](auto doc_result) { \
       ASSERT_ERROR( doc_result.get_##TYPE(), (ERROR) ); \
       return true; \
     })) { \
@@ -19,7 +19,7 @@ namespace wrong_type_error_tests {
     } \
   } \
   { \
-    padded_string a_json(std::string(R"({ "a": )") + JSON + " })"); \
+    auto a_json = std::string(R"({ "a": )") + JSON + " })"; \
     std::cout << R"(- Subtest: get_)" << (#TYPE) << "() - JSON: " << a_json << std::endl; \
     if (!test_ondemand_doc(a_json, [&](auto doc_result) { \
       ASSERT_ERROR( doc_result["a"].get_##TYPE(), (ERROR) ); \
@@ -191,19 +191,19 @@ namespace wrong_type_error_tests {
   bool wrong_type_null_padding() {
     TEST_START();
     ondemand::parser parser;
-    auto json = "null                                                                     ";
+    std::string_view json = "null                                                                     ";
     // Even though it *would* match if the document is bigger, it should not match using the padding
-    ASSERT_FALSE( parser.iterate(padded_string_view(json, 1, strlen(json))).is_null() );
-    ASSERT_FALSE( parser.iterate(padded_string_view(json, 2, strlen(json))).is_null() );
-    ASSERT_FALSE( parser.iterate(padded_string_view(json, 3, strlen(json))).is_null() );
+    ASSERT_FALSE( parser.iterate(json.substr(0, 1)).is_null() );
+    ASSERT_FALSE( parser.iterate(json.substr(0, 1)).is_null() );
+    ASSERT_FALSE( parser.iterate(json.substr(0, 3)).is_null() );
     // Validate that the JSON parses correctly in when it's big enough
-    ASSERT_TRUE(  parser.iterate(padded_string_view(json, 4, strlen(json))).is_null() );
-    ASSERT_TRUE(  parser.iterate(padded_string_view(json, 5, strlen(json))).is_null() );
+    ASSERT_TRUE(  parser.iterate(json.substr(0, 4)).is_null() );
+    ASSERT_TRUE(  parser.iterate(json.substr(0, 5)).is_null() );
 
     // Validate that identifier characters in the padding don't trip up the parser
     json = "nulll                                                                ";
-    ASSERT_TRUE(  parser.iterate(padded_string_view(json, 4, strlen(json))).is_null() );
-    ASSERT_FALSE( parser.iterate(padded_string_view(json, 5, strlen(json))).is_null() );
+    ASSERT_TRUE(  parser.iterate(json.substr(0, 4)).is_null() );
+    ASSERT_FALSE( parser.iterate(json.substr(0, 5)).is_null() );
     TEST_SUCCEED();
   }
 
@@ -242,17 +242,17 @@ namespace wrong_type_error_tests {
     ondemand::parser parser;
     auto json = "true                                                                     ";
     // Even though it *would* match if the document is bigger, it should not match using the padding
-    ASSERT_ERROR(  parser.iterate(padded_string_view(json, 1, strlen(json))).get_bool(), INCORRECT_TYPE );
-    ASSERT_ERROR(  parser.iterate(padded_string_view(json, 2, strlen(json))).get_bool(), INCORRECT_TYPE );
-    ASSERT_ERROR(  parser.iterate(padded_string_view(json, 3, strlen(json))).get_bool(), INCORRECT_TYPE );
+    ASSERT_ERROR(  parser.iterate(std::string_view(json, 1)).get_bool(), INCORRECT_TYPE );
+    ASSERT_ERROR(  parser.iterate(std::string_view(json, 2)).get_bool(), INCORRECT_TYPE );
+    ASSERT_ERROR(  parser.iterate(std::string_view(json, 3)).get_bool(), INCORRECT_TYPE );
     // Validate that the JSON parses correctly in when it's big enough
-    ASSERT_RESULT( parser.iterate(padded_string_view(json, 4, strlen(json))).get_bool(), true );
-    ASSERT_RESULT( parser.iterate(padded_string_view(json, 5, strlen(json))).get_bool(), true );
+    ASSERT_RESULT( parser.iterate(std::string_view(json, 4)).get_bool(), true );
+    ASSERT_RESULT( parser.iterate(std::string_view(json, 5)).get_bool(), true );
 
     // Validate that identifier characters in the padding don't trip up the parser
     json = "truel                                                                ";
-    ASSERT_RESULT( parser.iterate(padded_string_view(json, 4, strlen(json))).get_bool(), true);
-    ASSERT_ERROR(  parser.iterate(padded_string_view(json, 5, strlen(json))).get_bool(), INCORRECT_TYPE );
+    ASSERT_RESULT( parser.iterate(std::string_view(json, 4)).get_bool(), true);
+    ASSERT_ERROR(  parser.iterate(std::string_view(json, 5)).get_bool(), INCORRECT_TYPE );
     TEST_SUCCEED();
   }
 
@@ -306,18 +306,18 @@ namespace wrong_type_error_tests {
     ondemand::parser parser;
     auto json = "false                                                                     ";
     // Even though it *would* match if the document is bigger, it should not match using the padding
-    ASSERT_ERROR(  parser.iterate(padded_string_view(json, 1, strlen(json))).get_bool(), INCORRECT_TYPE );
-    ASSERT_ERROR(  parser.iterate(padded_string_view(json, 2, strlen(json))).get_bool(), INCORRECT_TYPE );
-    ASSERT_ERROR(  parser.iterate(padded_string_view(json, 3, strlen(json))).get_bool(), INCORRECT_TYPE );
-    ASSERT_ERROR(  parser.iterate(padded_string_view(json, 4, strlen(json))).get_bool(), INCORRECT_TYPE );
+    ASSERT_ERROR(  parser.iterate(std::string_view(json, 1)).get_bool(), INCORRECT_TYPE );
+    ASSERT_ERROR(  parser.iterate(std::string_view(json, 2)).get_bool(), INCORRECT_TYPE );
+    ASSERT_ERROR(  parser.iterate(std::string_view(json, 3)).get_bool(), INCORRECT_TYPE );
+    ASSERT_ERROR(  parser.iterate(std::string_view(json, 4)).get_bool(), INCORRECT_TYPE );
     // Validate that the JSON parses correctly in when it's big enough
-    ASSERT_RESULT( parser.iterate(padded_string_view(json, 5, strlen(json))).get_bool(), false );
-    ASSERT_RESULT( parser.iterate(padded_string_view(json, 6, strlen(json))).get_bool(), false );
+    ASSERT_RESULT( parser.iterate(std::string_view(json, 5)).get_bool(), false );
+    ASSERT_RESULT( parser.iterate(std::string_view(json, 6)).get_bool(), false );
 
     // Validate that identifier characters in the padding don't trip up the parser
     json = "falsel                                                                ";
-    ASSERT_RESULT( parser.iterate(padded_string_view(json, 5, strlen(json))).get_bool(), false);
-    ASSERT_ERROR(  parser.iterate(padded_string_view(json, 6, strlen(json))).get_bool(), INCORRECT_TYPE );
+    ASSERT_RESULT( parser.iterate(std::string_view(json, 5)).get_bool(), false);
+    ASSERT_ERROR(  parser.iterate(std::string_view(json, 6)).get_bool(), INCORRECT_TYPE );
     TEST_SUCCEED();
   }
 

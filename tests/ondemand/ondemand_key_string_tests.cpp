@@ -8,7 +8,7 @@ namespace key_string_tests {
   bool parser_key_value() {
     TEST_START();
     ondemand::parser parser;
-    const padded_string json = R"({ "1": "1", "2": "2", "3": "3", "abc": "abc", "\u0075": "\u0075" })"_padded;
+    const std::string_view json = R"({ "1": "1", "2": "2", "3": "3", "abc": "abc", "\u0075": "\u0075" })";
     auto doc = parser.iterate(json);
     for(auto field : doc.get_object())  {
       std::string_view keyv = field.unescaped_key();

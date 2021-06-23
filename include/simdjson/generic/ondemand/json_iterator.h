@@ -51,7 +51,6 @@ public:
   simdjson_really_inline json_iterator &operator=(json_iterator &&other) noexcept;
   simdjson_really_inline explicit json_iterator(const json_iterator &other) noexcept = default;
   simdjson_really_inline json_iterator &operator=(const json_iterator &other) noexcept = default;
-
   /**
    * Skips a JSON value, whether it is a scalar, array or object.
    */
@@ -218,14 +217,13 @@ public:
   simdjson_really_inline token_position start_position(depth_t depth) const noexcept;
   simdjson_really_inline void set_start_position(depth_t depth, token_position position) noexcept;
 #endif
+  /* Useful for debugging and logging purposes. */
+  inline std::string to_string() const noexcept;
   /**
    * Updates this json iterator so that it is back at the beginning of the document,
    * as if it had just been created.
    */
   inline void rewind() noexcept;
- /* Useful for debugging and logging purposes. */
-  inline std::string to_string() const noexcept;
-
 protected:
   simdjson_really_inline json_iterator(const uint8_t *buf, ondemand::parser *parser) noexcept;
   /// The last token before the end
@@ -234,7 +232,7 @@ protected:
   simdjson_really_inline token_position end_position() const noexcept;
   /// The end of the buffer.
   simdjson_really_inline const uint8_t *end() const noexcept;
-  
+
   friend class document;
   friend class object;
   friend class array;

@@ -64,6 +64,46 @@ simdjson_really_inline simdjson_result<object_iterator> object::end() noexcept {
   return object_iterator(iter);
 }
 
+inline simdjson_result<value> object::at_pointer(std::string_view json_pointer) noexcept {
+  if (json_pointer[0] != '/') { return INVALID_JSON_POINTER; }
+  json_pointer = json_pointer.substr(1);
+  size_t slash = json_pointer.find('/');
+  std::string_view key = json_pointer.substr(0, slash);
+  // Grab the child with the given key
+  simdjson_result<value> child;
+
+  // If there is an escape character in the key, unescape it and then get the child.
+  size_t escape = key.find('~');
+  if (escape != std::string_view::npos) {
+    // Unescape the key
+    std::string unescaped(key);
+    do {
+      switch (unescaped[escape+1]) {
+        case '0':
+          unescaped.replace(escape, 2, "~");
+          break;
+        case '1':
+          unescaped.replace(escape, 2, "/");
+          break;
+        default:
+          return INVALID_JSON_POINTER; // "Unexpected ~ escape character in JSON pointer");
+      }
+      escape = unescaped.find('~', escape+1);
+    } while (escape != std::string::npos);
+    child = find_field(unescaped);  // Take note find_field does not unescape keys when matching
+  } else {
+    child = find_field(key);
+  }
+  if(child.error()) {
+    return child; // we do not continue if there was an error
+  }
+  // If there is a /, we have to recurse and look up more of the path
+  if (slash != std::string_view::npos) {
+    child = child.at_pointer(json_pointer.substr(slash));
+  }
+  return child;
+}
+
 } // namespace ondemand
 } // namespace SIMDJSON_IMPLEMENTATION
 } // namespace simdjson
@@ -106,6 +146,11 @@ simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value>
 simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value> simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::object>::find_field(std::string_view key) && noexcept {
   if (error()) { return error(); }
   return std::forward<SIMDJSON_IMPLEMENTATION::ondemand::object>(first).find_field(key);
+}
+
+simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value> simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::object>::at_pointer(std::string_view json_pointer) noexcept {
+  if (error()) { return error(); }
+  return first.at_pointer(json_pointer);
 }
 
 } // namespace simdjson
