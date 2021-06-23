@@ -172,7 +172,7 @@ install:
   - export CMAKE_C_FLAGS="${CMAKE_CXX_FLAGS}"
   - export CMAKE_FLAGS="-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS} -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS} -DSIMDJSON_IMPLEMENTATION=ppc64;fallback";
   - if [[ "${SANITIZE}" == "on" ]]; then
-      export CMAKE_FLAGS="${CMAKE_FLAGS} -DSIMDJSON_SANITIZE=ON";
+      export CMAKE_FLAGS="${CMAKE_FLAGS}  -DSIMDJSON_NO_FORCE_INLINING=ON -DSIMDJSON_SANITIZE=ON";
       export ASAN_OPTIONS="detect_leaks=0";
     fi
   - if [[ "${STATIC}" == "on" ]]; then

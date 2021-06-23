@@ -11,7 +11,10 @@ namespace {
 struct backslash_and_quote {
 public:
   static constexpr uint32_t BYTES_PROCESSED = 1;
-  simdjson_really_inline static backslash_and_quote copy_and_find(const uint8_t *src, uint8_t *dst);
+  simdjson_really_inline static backslash_and_quote
+  copy_and_find(const uint8_t *src, uint8_t *dst, const uint8_t *last_full_buf);
+  simdjson_really_inline static backslash_and_quote
+  copy_and_find(const uint8_t *src, uint8_t *dst);
 
   simdjson_really_inline bool has_quote_first() { return c == '"'; }
   simdjson_really_inline bool has_backslash() { return c == '\\'; }
@@ -20,6 +23,10 @@ public:
 
   uint8_t c;
 }; // struct backslash_and_quote
+
+simdjson_really_inline backslash_and_quote backslash_and_quote::copy_and_find(const uint8_t *src, uint8_t *dst, const uint8_t *) {
+  return copy_and_find(src, dst);
+}
 
 simdjson_really_inline backslash_and_quote backslash_and_quote::copy_and_find(const uint8_t *src, uint8_t *dst) {
   // store to dest unconditionally - we can overwrite the bits we don't like later

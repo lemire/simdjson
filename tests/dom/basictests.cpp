@@ -113,6 +113,7 @@ namespace number_tests {
     };
     for (std::pair<std::string, double> p : testing) {
       double actual;
+      std::cout << p.first << std::endl;
       ASSERT_SUCCESS(parser.parse(p.first).get(actual));
       if (actual != p.second) {
           std::cerr << "JSON '" << p.first << "' parsed to " << actual << " instead of " << p.first << std::endl;

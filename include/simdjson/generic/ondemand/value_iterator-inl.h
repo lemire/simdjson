@@ -374,7 +374,9 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator
 simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::start_root_array() noexcept {
   bool result;
   SIMDJSON_TRY( start_array().get(result) );
-  if (*_json_iter->peek_last() != ']') { return _json_iter->report_error(TAPE_ERROR, "array invalid: [ at beginning of document unmatched by ] at end of document"); }
+  if (*_json_iter->peek_last() != ']') {
+    return _json_iter->report_error(TAPE_ERROR, "array invalid: [ at beginning of document unmatched by ] at end of document");
+  }
   return result;
 }
 
@@ -421,19 +423,8 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator
   }
 }
 
-simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::parse_bool(const uint8_t *json) const noexcept {
-  auto not_true = atomparsing::str4ncmp(json, "true");
-  auto not_false = atomparsing::str4ncmp(json, "fals") | (json[4] ^ 'e');
-  bool error = (not_true && not_false) || jsoncharutils::is_not_structural_or_whitespace(json[not_true ? 5 : 4]);
-  if (error) { return incorrect_type_error("Not a boolean"); }
-  return simdjson_result<bool>(!not_true);
-}
-simdjson_really_inline bool value_iterator::parse_null(const uint8_t *json) const noexcept {
-  return !atomparsing::str4ncmp(json, "null") && jsoncharutils::is_structural_or_whitespace(json[4]);
-}
-
 simdjson_warn_unused simdjson_really_inline simdjson_result<std::string_view> value_iterator::get_string() noexcept {
-  return get_raw_json_string().unescape(_json_iter->string_buf_loc());
+  return get_raw_json_string().unescape(*_json_iter);
 }
 simdjson_warn_unused simdjson_really_inline simdjson_result<raw_json_string> value_iterator::get_raw_json_string() noexcept {
   auto json = advance_start("string");
@@ -450,10 +441,36 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<double> value_iterat
   return numberparsing::parse_double(advance_non_root_scalar("double"));
 }
 simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::get_bool() noexcept {
-  return parse_bool(advance_non_root_scalar("bool"));
+  return parse_bool(peek_start_length(), advance_non_root_scalar("bool"));
+}
+
+simdjson_really_inline simdjson_result<bool> value_iterator::parse_bool(uint32_t max_len, const uint8_t *json) const noexcept {
+  if (max_len >= 4) {
+    if (!atomparsing::str4ncmp(json, "true")) {
+      if (max_len == 4 || jsoncharutils::is_structural_or_whitespace(json[4])) {
+        return simdjson_result<bool>(true);
+      }
+    } else if (!atomparsing::str4ncmp(json, "fals") && max_len >= 5 && json[4] == 'e') {
+      if (max_len == 5 || jsoncharutils::is_structural_or_whitespace(json[5])) {
+        return simdjson_result<bool>(false);
+      }
+    }
+  }
+  return incorrect_type_error("Not a boolean");
 }
 simdjson_really_inline bool value_iterator::is_null() noexcept {
-  return parse_null(advance_non_root_scalar("null"));
+  return parse_null(peek_start_length(), advance_non_root_scalar("null"));
+}
+
+simdjson_really_inline bool value_iterator::parse_null(uint32_t max_len, const uint8_t *json) const noexcept {
+  if (max_len >= 4) {
+    if (!atomparsing::str4ncmp(json, "null")) {
+      if (max_len == 4 || jsoncharutils::is_structural_or_whitespace(json[4])) {
+        return true;
+      }
+    };
+  }
+  return false;
 }
 
 constexpr const uint32_t MAX_INT_LENGTH = 1024;
@@ -467,48 +484,23 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<raw_json_string> val
 simdjson_warn_unused simdjson_really_inline simdjson_result<uint64_t> value_iterator::get_root_uint64() noexcept {
   auto max_len = peek_start_length();
   auto json = advance_root_scalar("uint64");
-  uint8_t tmpbuf[20+1]; // <20 digits> is the longest possible unsigned integer
-  if (!_json_iter->copy_to_buffer(json, max_len, tmpbuf)) {
-    logger::log_error(*_json_iter, start_position(), depth(), "Root number more than 20 characters");
-    return NUMBER_ERROR;
-  }
-  return numberparsing::parse_unsigned(tmpbuf);
+  return numberparsing::parse_unsigned(json, json+max_len);
 }
 simdjson_warn_unused simdjson_really_inline simdjson_result<int64_t> value_iterator::get_root_int64() noexcept {
   auto max_len = peek_start_length();
   auto json = advance_root_scalar("int64");
-  uint8_t tmpbuf[20+1]; // -<19 digits> is the longest possible integer
-  if (!_json_iter->copy_to_buffer(json, max_len, tmpbuf)) {
-    logger::log_error(*_json_iter, start_position(), depth(), "Root number more than 20 characters");
-    return NUMBER_ERROR;
-  }
-  return numberparsing::parse_integer(tmpbuf);
+  return numberparsing::parse_integer(json, json+max_len);
 }
 simdjson_warn_unused simdjson_really_inline simdjson_result<double> value_iterator::get_root_double() noexcept {
   auto max_len = peek_start_length();
   auto json = advance_root_scalar("double");
-  // Per https://www.exploringbinary.com/maximum-number-of-decimal-digits-in-binary-floating-point-numbers/,
-  // 1074 is the maximum number of significant fractional digits. Add 8 more digits for the biggest
-  // number: -0.<fraction>e-308.
-  uint8_t tmpbuf[1074+8+1];
-  if (!_json_iter->copy_to_buffer(json, max_len, tmpbuf)) {
-    logger::log_error(*_json_iter, start_position(), depth(), "Root number more than 1082 characters");
-    return NUMBER_ERROR;
-  }
-  return numberparsing::parse_double(tmpbuf);
+  return numberparsing::parse_double(json, json+max_len);
 }
 simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::get_root_bool() noexcept {
-  auto max_len = peek_start_length();
-  auto json = advance_root_scalar("bool");
-  uint8_t tmpbuf[5+1];
-  if (!_json_iter->copy_to_buffer(json, max_len, tmpbuf)) { return incorrect_type_error("Not a boolean"); }
-  return parse_bool(tmpbuf);
+  return parse_bool(peek_start_length(), advance_root_scalar("bool"));
 }
 simdjson_really_inline bool value_iterator::is_root_null() noexcept {
-  auto max_len = peek_start_length();
-  auto json = advance_root_scalar("null");
-  return max_len >= 4 && !atomparsing::str4ncmp(json, "null") &&
-         (max_len == 4 || jsoncharutils::is_structural_or_whitespace(json[5]));
+  return parse_null(peek_start_length(), advance_root_scalar("null"));
 }
 
 simdjson_warn_unused simdjson_really_inline error_code value_iterator::skip_child() noexcept {

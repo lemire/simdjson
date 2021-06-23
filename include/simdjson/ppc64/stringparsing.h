@@ -16,6 +16,8 @@ struct backslash_and_quote {
 public:
   static constexpr uint32_t BYTES_PROCESSED = 32;
   simdjson_really_inline static backslash_and_quote
+  copy_and_find(const uint8_t *src, uint8_t *dst, const uint8_t *last_full_buf);
+  simdjson_really_inline static backslash_and_quote
   copy_and_find(const uint8_t *src, uint8_t *dst);
 
   simdjson_really_inline bool has_quote_first() {
@@ -32,6 +34,19 @@ public:
   uint32_t bs_bits;
   uint32_t quote_bits;
 }; // struct backslash_and_quote
+
+simdjson_really_inline backslash_and_quote
+backslash_and_quote::copy_and_find(const uint8_t *src, uint8_t *dst, const uint8_t *last_full_buf) {
+  // If we don't have enough memory left to load a whole simd register, copy it first.
+  uint8_t tmpbuf[BYTES_PROCESSED];
+  if (simdjson_unlikely(src > last_full_buf)) {
+    SIMDJSON_ASSUME(last_full_buf+BYTES_PROCESSED > src);
+    std::memset(tmpbuf, 0, BYTES_PROCESSED);
+    std::memcpy(tmpbuf, src, last_full_buf+BYTES_PROCESSED-src);
+    src = tmpbuf;
+  }
+  return copy_and_find(src, dst);
+}
 
 simdjson_really_inline backslash_and_quote
 backslash_and_quote::copy_and_find(const uint8_t *src, uint8_t *dst) {

@@ -4,27 +4,8 @@
 namespace simdjson {
 namespace SIMDJSON_IMPLEMENTATION {
 
-// expectation: sizeof(open_container) = 64/8.
-struct open_container {
-  uint32_t tape_index; // where, on the tape, does the scope ([,{) begins
-  uint32_t count; // how many elements in the scope
-}; // struct open_container
-
-static_assert(sizeof(open_container) == 64/8, "Open container must be 64 bits");
-
 class dom_parser_implementation final : public internal::dom_parser_implementation {
 public:
-  /** Tape location of each open { or [ */
-  std::unique_ptr<open_container[]> open_containers{};
-  /** Whether each open container is a [ or { */
-  std::unique_ptr<bool[]> is_array{};
-  /** Buffer passed to stage 1 */
-  const uint8_t *buf{};
-  /** Length passed to stage 1 */
-  size_t len{0};
-  /** Document passed to stage 2 */
-  dom::document *doc{};
-
   inline dom_parser_implementation() noexcept;
   inline dom_parser_implementation(dom_parser_implementation &&other) noexcept;
   inline dom_parser_implementation &operator=(dom_parser_implementation &&other) noexcept;
@@ -68,7 +49,7 @@ inline simdjson_warn_unused error_code dom_parser_implementation::set_capacity(s
 
 inline simdjson_warn_unused error_code dom_parser_implementation::set_max_depth(size_t max_depth) noexcept {
   // Stage 2 stacks
-  open_containers.reset(new (std::nothrow) open_container[max_depth]);
+  open_containers.reset(new (std::nothrow) internal::open_container[max_depth]);
   is_array.reset(new (std::nothrow) bool[max_depth]);
   if (!is_array || !open_containers) { _max_depth = 0; return MEMALLOC; }
 

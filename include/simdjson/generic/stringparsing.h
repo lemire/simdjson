@@ -77,10 +77,11 @@ simdjson_really_inline bool handle_unicode_codepoint(const uint8_t **src_ptr,
  * Unescape a string from src to dst, stopping at a final unescaped quote. E.g., if src points at 'joe"', then
  * dst needs to have four free bytes.
  */
-simdjson_warn_unused simdjson_really_inline uint8_t *parse_string(const uint8_t *src, uint8_t *dst) {
+simdjson_warn_unused simdjson_really_inline uint8_t *parse_string(const uint8_t *src, uint8_t *dst, const uint8_t *end) {
+  const uint8_t *last_full_buf = end - backslash_and_quote::BYTES_PROCESSED;
   while (1) {
     // Copy the next n bytes, and find the backslash and quote in them.
-    auto bs_quote = backslash_and_quote::copy_and_find(src, dst);
+    auto bs_quote = backslash_and_quote::copy_and_find(src, dst, last_full_buf);
     // If the next thing is the end quote, copy and return
     if (bs_quote.has_quote_first()) {
       // we encountered quotes first. Move dst to point to quotes and exit
@@ -121,15 +122,6 @@ simdjson_warn_unused simdjson_really_inline uint8_t *parse_string(const uint8_t 
   }
   /* can't be reached */
   return nullptr;
-}
-
-simdjson_unused simdjson_warn_unused simdjson_really_inline error_code parse_string_to_buffer(const uint8_t *src, uint8_t *&current_string_buf_loc, std::string_view &s) {
-  if (*(src++) != '"') { return STRING_ERROR; }
-  auto end = stringparsing::parse_string(src, current_string_buf_loc);
-  if (!end) { return STRING_ERROR; }
-  s = std::string_view(reinterpret_cast<const char *>(current_string_buf_loc), end-current_string_buf_loc);
-  current_string_buf_loc = end;
-  return SUCCESS;
 }
 
 } // namespace stringparsing

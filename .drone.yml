@@ -168,7 +168,7 @@ steps:
   environment:
     CC: clang-9
     CXX: clang++-9
-    CMAKE_FLAGS: -DSIMDJSON_SANITIZE=ON -DSIMDJSON_IMPLEMENTATION=haswell;westmere;fallback
+    CMAKE_FLAGS:  -DSIMDJSON_NO_FORCE_INLINING=ON -DSIMDJSON_SANITIZE=ON -DSIMDJSON_IMPLEMENTATION=haswell;westmere;fallback
     BUILD_FLAGS: -- -j
     CTEST_FLAGS: -j4 --output-on-failure -LE explicitonly
   commands:
@@ -329,7 +329,7 @@ steps:
   environment:
     CC: clang-6.0
     CXX: clang++-6.0
-    CMAKE_FLAGS: -DSIMDJSON_SANITIZE=ON -DSIMDJSON_IMPLEMENTATION=arm64;fallback
+    CMAKE_FLAGS:  -DSIMDJSON_NO_FORCE_INLINING=ON -DSIMDJSON_SANITIZE=ON -DSIMDJSON_IMPLEMENTATION=arm64;fallback
     BUILD_FLAGS: -- -j
     CTEST_FLAGS: -j4 --output-on-failure -LE explicitonly
   commands:

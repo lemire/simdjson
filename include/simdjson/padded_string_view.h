@@ -50,6 +50,8 @@ public:
    * @param capacity The allocated length of the string, including padding.
    */
   explicit inline padded_string_view(std::string_view s, size_t capacity) noexcept;
+  inline padded_string_view(const char *s, size_t capacity) noexcept = delete;
+  inline padded_string_view(const uint8_t *s, size_t capacity) noexcept = delete;
 
   /** The number of allocated bytes. */
   inline size_t capacity() const noexcept;

@@ -24,7 +24,7 @@ jobs:
         run: |
           mkdir build &&
           cd build &&
-          cmake  -DSIMDJSON_SANITIZE_THREADS=ON ..  &&
+          cmake   -DSIMDJSON_NO_FORCE_INLINING=ON -DSIMDJSON_SANITIZE_THREADS=ON ..  &&
           cmake --build . --target document_stream_tests --target parse_many_test  &&
           ctest --output-on-failure  -R parse_many_test  &&
           ctest --output-on-failure  -R document_stream_tests

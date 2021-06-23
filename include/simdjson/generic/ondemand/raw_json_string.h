@@ -140,10 +140,13 @@ private:
    * @param dst A pointer to a buffer at least large enough to write this string as well as a \0.
    *            dst will be updated to the next unused location (just after the \0 written out at
    *            the end of this string).
+   * @param buf_end A pointer to the end of the input JSON you passed to iterate(). This is
+   *            used to prevent overruns, since simdjson normally reads (but does not use) past
+   *            the end quote when parsing a string for performance reasons.
    * @return A string_view pointing at the unescaped string in dst
    * @error STRING_ERROR if escapes are incorrect.
    */
-  simdjson_really_inline simdjson_warn_unused simdjson_result<std::string_view> unescape(uint8_t *&dst) const noexcept;
+  simdjson_really_inline simdjson_warn_unused simdjson_result<std::string_view> unescape(uint8_t *&dst, const uint8_t *buf_end) const noexcept;
   /**
    * Unescape this JSON string, replacing \\ with \, \n with newline, etc.
    *
@@ -188,7 +191,7 @@ public:
   simdjson_really_inline ~simdjson_result() noexcept = default; ///< @private
 
   simdjson_really_inline simdjson_result<const char *> raw() const noexcept;
-  simdjson_really_inline simdjson_warn_unused simdjson_result<std::string_view> unescape(uint8_t *&dst) const noexcept;
+  simdjson_really_inline simdjson_warn_unused simdjson_result<std::string_view> unescape(uint8_t *&dst, const uint8_t *buf_end) const noexcept;
   simdjson_really_inline simdjson_warn_unused simdjson_result<std::string_view> unescape(SIMDJSON_IMPLEMENTATION::ondemand::json_iterator &iter) const noexcept;
 };
 

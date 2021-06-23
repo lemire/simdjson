@@ -34,6 +34,13 @@ inline bool is_streaming(stage1_mode mode) {
 
 namespace internal {
 
+// expectation: sizeof(open_container) = 64/8.
+struct open_container {
+  uint32_t tape_index; // where, on the tape, does the scope ([,{) begins
+  uint32_t count; // how many elements in the scope
+}; // struct open_container
+
+static_assert(sizeof(open_container) == 64/8, "Open container must be 64 bits");
 
 /**
  * An implementation of simdjson's DOM parser for a particular CPU architecture.
@@ -178,6 +185,19 @@ protected:
    */
   size_t _max_depth{0};
 
+public:
+  /** Tape location of each open { or [ */
+  std::unique_ptr<open_container[]> open_containers{};
+  /** Whether each open container is a [ or { */
+  std::unique_ptr<bool[]> is_array{};
+  /** Buffer passed to stage 1 */
+  const uint8_t *buf{};
+  /** Length passed to stage 1 */
+  size_t len{0};
+  /** Document passed to stage 2 */
+  dom::document *doc{};
+
+protected:
   // Declaring these so that subclasses can use them to implement their constructors.
   simdjson_really_inline dom_parser_implementation() noexcept;
   simdjson_really_inline dom_parser_implementation(dom_parser_implementation &&other) noexcept;

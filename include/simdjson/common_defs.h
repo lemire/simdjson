@@ -71,8 +71,12 @@ constexpr size_t DEFAULT_MAX_DEPTH = 1024;
 #define SIMDJSON_ISALIGNED_N(ptr, n) (((uintptr_t)(ptr) & ((n)-1)) == 0)
 
 #if defined(SIMDJSON_REGULAR_VISUAL_STUDIO)
-
+  #if SIMDJSON_NO_FORCE_INLINING
+  // forcing inlining can increase stack usage.
+  #define simdjson_really_inline inline
+  #else
   #define simdjson_really_inline __forceinline
+  #endif
   #define simdjson_never_inline __declspec(noinline)
 
   #define simdjson_unused
@@ -106,8 +110,12 @@ constexpr size_t DEFAULT_MAX_DEPTH = 1024;
   #define SIMDJSON_POP_DISABLE_WARNINGS __pragma(warning( pop ))
 
 #else // SIMDJSON_REGULAR_VISUAL_STUDIO
-
+  #if SIMDJSON_NO_FORCE_INLINING
+  // forcing inlining can increase stack usage.
+  #define simdjson_really_inline inline
+  #else
   #define simdjson_really_inline inline __attribute__((always_inline))
+  #endif
   #define simdjson_never_inline inline __attribute__((noinline))
 
   #define simdjson_unused __attribute__((unused))

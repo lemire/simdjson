@@ -3,6 +3,11 @@
 #
 add_library(simdjson-internal-flags INTERFACE)
 
+option(SIMDJSON_NO_FORCE_INLINING "Do not attempt to force function inlining" OFF)
+if(SIMDJSON_NO_FORCE_INLINING)
+  add_compile_definitions(SIMDJSON_NO_FORCE_INLINING=1)
+endif()
+
 option(SIMDJSON_SANITIZE_UNDEFINED "Sanitize undefined behavior" OFF)
 if(SIMDJSON_SANITIZE_UNDEFINED)
   add_compile_options(-fsanitize=undefined -fno-sanitize-recover=all)

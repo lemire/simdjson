@@ -89,6 +89,13 @@ simdjson_really_inline bool assert_true(bool value, const char *operation = "res
   }
   return true;
 }
+simdjson_really_inline bool assert_false(bool value, const char *operation = "result") {
+  if (value) {
+    std::cerr << "FAIL: " << operation << " was true (expected it to be false)!" << std::endl;
+    return false;
+  }
+  return true;
+}
 template<typename T>
 simdjson_really_inline bool assert_iterate_error(T &arr, simdjson::error_code expected, const char *operation = "result") {
   int count = 0;
@@ -107,6 +114,7 @@ simdjson_really_inline bool assert_iterate_error(T &arr, simdjson::error_code ex
 #define ASSERT_SUCCESS(ACTUAL)          do { if (!::assert_success((ACTUAL),             #ACTUAL)) { return false; } } while (0);
 #define ASSERT_ERROR(ACTUAL, EXPECTED)  do { if (!::assert_error  ((ACTUAL), (EXPECTED), #ACTUAL)) { return false; } } while (0);
 #define ASSERT_TRUE(ACTUAL)             do { if (!::assert_true   ((ACTUAL),             #ACTUAL)) { return false; } } while (0);
+#define ASSERT_FALSE(ACTUAL)            do { if (!::assert_false  ((ACTUAL),             #ACTUAL)) { return false; } } while (0);
 #define ASSERT(ACTUAL, MESSAGE)         do { if (!::assert_true   ((ACTUAL),           (MESSAGE))) { return false; } } while (0);
 #define ASSERT_ITERATE_ERROR(ACTUAL, EXPECTED)  do { if (!::assert_iterate_error((ACTUAL), (EXPECTED), #ACTUAL)) { return false; } } while (0);
 #define RUN_TEST(ACTUAL)                do { if (!(ACTUAL)) { return false; } } while (0);
