@@ -46,7 +46,7 @@ public:
   /**
    * Tell whether the iterator is at the EOF mark
    */
-  simdjson_really_inline bool at_eof() const noexcept;
+  simdjson_really_inline bool at_end() const noexcept;
 
   /**
    * Tell whether the iterator is at the start of the value
@@ -83,7 +83,7 @@ public:
    *
    * @error TAPE_ERROR when the JSON value is a bad token like "}" "," or "alse".
    */
-  simdjson_really_inline simdjson_result<json_type> type() noexcept;
+  simdjson_really_inline simdjson_result<json_type> type() const noexcept;
 
   /**
    * @addtogroup object Object iteration
@@ -116,8 +116,9 @@ public:
    * Does not move the iterator.
    *
    * @returns Whether the object had any fields (returns false for empty).
+   * @error TAPE_ERROR If there are not enough tokens remaining to have a key, :, and value.
    */
-  simdjson_warn_unused simdjson_really_inline bool started_object() noexcept;
+  simdjson_warn_unused simdjson_really_inline simdjson_result<bool> started_object() noexcept;
 
   /**
    * Moves to the next field in an object.
@@ -127,6 +128,7 @@ public:
    *
    * @return whether there is another field in the object.
    * @error TAPE_ERROR If there is a comma missing between fields.
+   * @error TAPE_ERROR If there is a comma, but not enough tokens remaining to have a key, :, and value.
    */
   simdjson_warn_unused simdjson_really_inline simdjson_result<bool> has_next_field() noexcept;
 
@@ -298,12 +300,21 @@ protected:
 
   simdjson_really_inline const uint8_t *peek_start() const noexcept;
   simdjson_really_inline uint32_t peek_start_length() const noexcept;
-  simdjson_really_inline const uint8_t *advance_start(const char *type) const noexcept;
-  simdjson_really_inline error_code advance_container_start(const char *type, const uint8_t *&json) const noexcept;
-  simdjson_really_inline const uint8_t *advance_root_scalar(const char *type) const noexcept;
-  simdjson_really_inline const uint8_t *advance_non_root_scalar(const char *type) const noexcept;
+  simdjson_really_inline const uint8_t *advance_start(const char *type) noexcept;
+  simdjson_really_inline error_code advance_container_start(const char *type, const uint8_t *&json) noexcept;
+  simdjson_really_inline const uint8_t *advance_root_scalar(const char *type) noexcept;
+  simdjson_really_inline const uint8_t *advance_non_root_scalar(const char *type) noexcept;
+
+  /**
+   * Advance to a place expecting a value (increasing depth).
+   *
+   * @return The current token (the one left behind).
+   * @error TAPE_ERROR If the document ended early.
+   */
+  simdjson_really_inline simdjson_result<const uint8_t *> advance_to_value() noexcept;
 
   simdjson_really_inline error_code incorrect_type_error(const char *message) const noexcept;
+  simdjson_really_inline error_code error_unless_more_tokens(uint32_t tokens=1) const noexcept;
 
   simdjson_really_inline bool is_at_start() const noexcept;
   simdjson_really_inline bool is_at_container_start() const noexcept;
@@ -314,6 +325,18 @@ protected:
   inline void assert_at_child() const noexcept;
   inline void assert_at_next() const noexcept;
   inline void assert_at_non_root_start() const noexcept;
+
+  /** Get the starting position of this value */
+  simdjson_really_inline token_position start_position() const noexcept;
+
+  /** @copydoc error_code json_iterator::position() const noexcept; */
+  simdjson_really_inline token_position position() const noexcept;
+  /** @copydoc error_code json_iterator::end_position() const noexcept; */
+  simdjson_really_inline token_position last_position() const noexcept;
+  /** @copydoc error_code json_iterator::end_position() const noexcept; */
+  simdjson_really_inline token_position end_position() const noexcept;
+  /** @copydoc error_code json_iterator::report_error(error_code error, const char *message) noexcept; */
+  simdjson_really_inline error_code report_error(error_code error, const char *message) noexcept;
 
   friend class document;
   friend class object;

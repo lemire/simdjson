@@ -21,7 +21,7 @@ inline std::string document::to_debug_string() noexcept {
 }
 
 simdjson_really_inline value_iterator document::resume_value_iterator() noexcept {
-  return value_iterator(&iter, 1, iter.root_checkpoint());
+  return value_iterator(&iter, 1, iter.root_position());
 }
 simdjson_really_inline value_iterator document::get_root_value_iterator() noexcept {
   return resume_value_iterator();

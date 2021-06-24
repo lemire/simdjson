@@ -2,18 +2,20 @@ namespace simdjson {
 namespace SIMDJSON_IMPLEMENTATION {
 namespace ondemand {
 
-simdjson_really_inline token_iterator::token_iterator(const uint8_t *_buf, token_position _index) noexcept
-  : buf{_buf}, index{_index}
+simdjson_really_inline token_iterator::token_iterator(
+  const uint8_t *_buf,
+  token_position position
+) noexcept : buf{_buf}, _position{position}
 {
 }
 
 simdjson_really_inline uint32_t token_iterator::current_offset() const noexcept {
-  return *(index);
+  return *(_position);
 }
 
 
 simdjson_really_inline const uint8_t *token_iterator::advance() noexcept {
-  return &buf[*(index++)];
+  return &buf[*(_position++)];
 }
 
 simdjson_really_inline const uint8_t *token_iterator::peek(token_position position) const noexcept {
@@ -27,39 +29,39 @@ simdjson_really_inline uint32_t token_iterator::peek_length(token_position posit
 }
 
 simdjson_really_inline const uint8_t *token_iterator::peek(int32_t delta) const noexcept {
-  return &buf[*(index+delta)];
+  return &buf[*(_position+delta)];
 }
 simdjson_really_inline uint32_t token_iterator::peek_index(int32_t delta) const noexcept {
-  return *(index+delta);
+  return *(_position+delta);
 }
 simdjson_really_inline uint32_t token_iterator::peek_length(int32_t delta) const noexcept {
-  return *(index+delta+1) - *(index+delta);
+  return *(_position+delta+1) - *(_position+delta);
 }
 
 simdjson_really_inline token_position token_iterator::position() const noexcept {
-  return index;
+  return _position;
 }
-simdjson_really_inline void token_iterator::set_position(token_position target_checkpoint) noexcept {
-  index = target_checkpoint;
+simdjson_really_inline void token_iterator::set_position(token_position target_position) noexcept {
+  _position = target_position;
 }
 
 simdjson_really_inline bool token_iterator::operator==(const token_iterator &other) const noexcept {
-  return index == other.index;
+  return _position == other._position;
 }
 simdjson_really_inline bool token_iterator::operator!=(const token_iterator &other) const noexcept {
-  return index != other.index;
+  return _position != other._position;
 }
 simdjson_really_inline bool token_iterator::operator>(const token_iterator &other) const noexcept {
-  return index > other.index;
+  return _position > other._position;
 }
 simdjson_really_inline bool token_iterator::operator>=(const token_iterator &other) const noexcept {
-  return index >= other.index;
+  return _position >= other._position;
 }
 simdjson_really_inline bool token_iterator::operator<(const token_iterator &other) const noexcept {
-  return index < other.index;
+  return _position < other._position;
 }
 simdjson_really_inline bool token_iterator::operator<=(const token_iterator &other) const noexcept {
-  return index <= other.index;
+  return _position <= other._position;
 }
 
 } // namespace ondemand

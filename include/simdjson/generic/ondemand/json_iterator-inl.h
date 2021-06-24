@@ -22,16 +22,17 @@ simdjson_really_inline json_iterator &json_iterator::operator=(json_iterator &&o
 }
 
 simdjson_really_inline json_iterator::json_iterator(const uint8_t *buf, ondemand::parser *_parser) noexcept
-  : token(buf, _parser->implementation->structural_indexes.get()),
+  : token(buf, &_parser->implementation->structural_indexes[0]),
     parser{_parser},
     _string_buf_loc{parser->string_buf.get()},
     _depth{1}
 {
   logger::log_headers();
+  assert_more_tokens(1);
 }
 
 inline void json_iterator::rewind() noexcept {
-  token.index = parser->implementation->structural_indexes.get();
+  token.set_position( root_position() );
   logger::log_headers(); // We start again
   _string_buf_loc = parser->string_buf.get();
   _depth = 1;
@@ -45,6 +46,7 @@ SIMDJSON_DISABLE_STRICT_OVERFLOW_WARNING
 simdjson_warn_unused simdjson_really_inline error_code json_iterator::skip_child(depth_t parent_depth) noexcept {
   if (depth() <= parent_depth) { return SUCCESS; }
 
+  SIMDJSON_TRY( require_tokens(1) );
   switch (*advance()) {
     // TODO consider whether matching braces is a requirement: if non-matching braces indicates
     // *missing* braces, then future lookups are not in the object/arrays they think they are,
@@ -90,8 +92,7 @@ simdjson_warn_unused simdjson_really_inline error_code json_iterator::skip_child
   }
 
   // Now that we've considered the first value, we only increment/decrement for arrays/objects
-  auto end = &parser->implementation->structural_indexes[parser->implementation->n_structural_indexes];
-  while (token.index <= end) {
+  while (position() < end_position()) {
     switch (*advance()) {
       case '[': case '{':
         logger::log_start_value(*this, "skip");
@@ -119,10 +120,10 @@ simdjson_warn_unused simdjson_really_inline error_code json_iterator::skip_child
 SIMDJSON_POP_DISABLE_WARNINGS
 
 simdjson_really_inline bool json_iterator::at_root() const noexcept {
-  return token.position() == root_checkpoint();
+  return position() == root_position();
 }
 
-simdjson_really_inline token_position json_iterator::root_checkpoint() const noexcept {
+simdjson_really_inline token_position json_iterator::root_position() const noexcept {
   return parser->implementation->structural_indexes.get();
 }
 
@@ -130,12 +131,27 @@ simdjson_really_inline void json_iterator::assert_at_root() const noexcept {
   SIMDJSON_ASSUME( _depth == 1 );
   // Visual Studio Clang treats unique_ptr.get() as "side effecting."
 #ifndef SIMDJSON_CLANG_VISUAL_STUDIO
-  SIMDJSON_ASSUME( token.index == parser->implementation->structural_indexes.get() );
+  SIMDJSON_ASSUME( token._position == parser->implementation->structural_indexes.get() );
 #endif
 }
 
-simdjson_really_inline bool json_iterator::at_eof() const noexcept {
-  return token.index == &parser->implementation->structural_indexes[parser->implementation->n_structural_indexes];
+simdjson_really_inline void json_iterator::assert_more_tokens(uint32_t required_tokens) const noexcept {
+  assert_valid_position(token.position() + required_tokens - 1);
+}
+
+simdjson_really_inline void json_iterator::assert_valid_position(token_position position) const noexcept {
+#ifndef SIMDJSON_CLANG_VISUAL_STUDIO
+  SIMDJSON_ASSUME( position >= &parser->implementation->structural_indexes[0] );
+  SIMDJSON_ASSUME( position < &parser->implementation->structural_indexes[parser->implementation->n_structural_indexes] );
+#endif
+}
+
+simdjson_really_inline bool json_iterator::at_end() const noexcept {
+  return position() == end_position();
+}
+simdjson_really_inline token_position json_iterator::end_position() const noexcept {
+  uint32_t n_structural_indexes{parser->implementation->n_structural_indexes};
+  return &parser->implementation->structural_indexes[n_structural_indexes];
 }
 
 inline std::string json_iterator::to_string() const noexcept {
@@ -158,26 +174,48 @@ simdjson_really_inline void json_iterator::abandon() noexcept {
 }
 
 simdjson_really_inline const uint8_t *json_iterator::advance() noexcept {
+  assert_more_tokens();
   return token.advance();
 }
 
+simdjson_really_inline simdjson_result<const uint8_t *> json_iterator::try_advance(uint32_t required_tokens) noexcept {
+  const uint8_t *json = token.advance();
+  // Check this *after* we get the pointer, since getting the pointer is more time-sensitive than the branch.
+  // Also resolves nicely to 0 in the common case of required_tokens == 1.
+  SIMDJSON_TRY( require_tokens(required_tokens - 1) );
+  return json;
+}
+
+simdjson_really_inline error_code json_iterator::require_tokens(simdjson_unused uint32_t required_tokens) noexcept {
+#if __SIMDJSON_CHECK_EOF
+  if (position() + required_tokens > end_position()) {
+    return report_error(TAPE_ERROR, "Document ended early");
+  }
+#endif
+  return SUCCESS;
+}
+
 simdjson_really_inline const uint8_t *json_iterator::peek(int32_t delta) const noexcept {
+  assert_more_tokens(delta+1);
   return token.peek(delta);
 }
 
 simdjson_really_inline uint32_t json_iterator::peek_length(int32_t delta) const noexcept {
+  assert_more_tokens(delta+1);
   return token.peek_length(delta);
 }
 
 simdjson_really_inline const uint8_t *json_iterator::peek(token_position position) const noexcept {
+  assert_valid_position(position);
   return token.peek(position);
 }
 
 simdjson_really_inline uint32_t json_iterator::peek_length(token_position position) const noexcept {
+  assert_valid_position(position);
   return token.peek_length(position);
 }
 
-simdjson_really_inline token_position json_iterator::last_document_position() const noexcept {
+simdjson_really_inline token_position json_iterator::last_position() const noexcept {
   // The following line fails under some compilers...
   // SIMDJSON_ASSUME(parser->implementation->n_structural_indexes > 0);
   // since it has side-effects.
@@ -186,7 +224,7 @@ simdjson_really_inline token_position json_iterator::last_document_position() co
   return &parser->implementation->structural_indexes[n_structural_indexes - 1];
 }
 simdjson_really_inline const uint8_t *json_iterator::peek_last() const noexcept {
-  return token.peek(last_document_position());
+  return token.peek(last_position());
 }
 
 simdjson_really_inline void json_iterator::ascend_to(depth_t parent_depth) noexcept {
@@ -219,6 +257,7 @@ simdjson_really_inline error_code json_iterator::report_error(error_code _error,
 simdjson_really_inline token_position json_iterator::position() const noexcept {
   return token.position();
 }
+
 simdjson_really_inline void json_iterator::reenter_child(token_position position, depth_t child_depth) noexcept {
   SIMDJSON_ASSUME(child_depth >= 1 && child_depth < INT32_MAX);
   SIMDJSON_ASSUME(_depth == child_depth - 1);
@@ -232,9 +271,11 @@ simdjson_really_inline void json_iterator::reenter_child(token_position position
 }
 
 #ifdef SIMDJSON_DEVELOPMENT_CHECKS
+
 simdjson_really_inline token_position json_iterator::start_position(depth_t depth) const noexcept {
   return parser->start_positions[depth];
 }
+
 simdjson_really_inline void json_iterator::set_start_position(depth_t depth, token_position position) noexcept {
   parser->start_positions[depth] = position;
 }

@@ -167,7 +167,6 @@ using namespace simd;
         }
         this->prev_incomplete = is_incomplete(input.chunks[simd8x64<uint8_t>::NUM_CHUNKS-1]);
         this->prev_input_block = input.chunks[simd8x64<uint8_t>::NUM_CHUNKS-1];
-
       }
     }
     // do not forget to call check_eof!

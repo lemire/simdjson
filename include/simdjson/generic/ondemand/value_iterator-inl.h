@@ -2,10 +2,11 @@ namespace simdjson {
 namespace SIMDJSON_IMPLEMENTATION {
 namespace ondemand {
 
-simdjson_really_inline value_iterator::value_iterator(json_iterator *json_iter, depth_t depth, token_position start_index) noexcept
-  : _json_iter{json_iter},
-    _depth{depth},
-    _start_position{start_index}
+simdjson_really_inline value_iterator::value_iterator(
+  json_iterator *json_iter,
+  depth_t depth,
+  token_position start_position
+) noexcept : _json_iter{json_iter}, _depth{depth}, _start_position{start_position}
 {
 }
 
@@ -19,34 +20,39 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator
 simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::start_root_object() noexcept {
   bool result;
   SIMDJSON_TRY( start_object().get(result) );
-  if (*_json_iter->peek_last() != '}') { return _json_iter->report_error(TAPE_ERROR, "object invalid: { at beginning of document unmatched by } at end of document"); }
+  if (*_json_iter->peek_last() != '}') {
+    return _json_iter->report_error(TAPE_ERROR, "object invalid: { at beginning of document unmatched by } at end of document");
+  }
   return result;
 }
 
-simdjson_warn_unused simdjson_really_inline bool value_iterator::started_object() noexcept {
+simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::started_object() noexcept {
   assert_at_container_start();
 #ifdef SIMDJSON_DEVELOPMENT_CHECKS
-  _json_iter->set_start_position(_depth, _start_position);
+  _json_iter->set_start_position(_depth, start_position());
 #endif
+  SIMDJSON_TRY( _json_iter->require_tokens(1) );
   if (*_json_iter->peek() == '}') {
     logger::log_value(*_json_iter, "empty object");
     _json_iter->advance();
     _json_iter->ascend_to(depth()-1);
     return false;
   }
-  logger::log_start_value(*_json_iter, "object");
+  SIMDJSON_TRY( _json_iter->require_tokens(3) ); // Make sure we have three tokens: "x" : value
   return true;
 }
 
 simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::has_next_field() noexcept {
   assert_at_next();
 
+  SIMDJSON_TRY( error_unless_more_tokens() );
   switch (*_json_iter->advance()) {
     case '}':
       logger::log_end_value(*_json_iter, "object");
       _json_iter->ascend_to(depth()-1);
       return false;
     case ',':
+      SIMDJSON_TRY( error_unless_more_tokens(3) ); // Make sure we have three tokens: "x" : value
       return true;
     default:
       return _json_iter->report_error(TAPE_ERROR, "Missing comma between object fields");
@@ -105,7 +111,7 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator
     if ((error = skip_child() )) { abandon(); return error; }
     if ((error = has_next_field().get(has_value) )) { abandon(); return error; }
 #ifdef SIMDJSON_DEVELOPMENT_CHECKS
-    if (_json_iter->start_position(_depth) != _start_position) { return OUT_OF_ORDER_ITERATION; }
+    if (_json_iter->start_position(_depth) != start_position()) { return OUT_OF_ORDER_ITERATION; }
 #endif
   }
   while (has_value) {
@@ -196,7 +202,7 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator
 #endif
     _json_iter->reenter_child(_start_position + 1, _depth);
     at_first = true;
-    has_value = started_object();
+    SIMDJSON_TRY( started_object().get(has_value) );
   // 3. When a previous search found a field or an iterator yielded a value:
   //
   //    ```
@@ -222,7 +228,7 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator
     // then we are in error and we abort.
     if ((error = has_next_field().get(has_value) )) { abandon(); return error; }
 #ifdef SIMDJSON_DEVELOPMENT_CHECKS
-    if (_json_iter->start_position(_depth) != _start_position) { return OUT_OF_ORDER_ITERATION; }
+    if (_json_iter->start_position(_depth) != start_position()) { return OUT_OF_ORDER_ITERATION; }
 #endif
   }
 
@@ -288,8 +294,9 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator
   // beginning of the object.
   // (We have already run through the object before, so we've already validated its structure. We
   // don't check errors in this bit.)
-  _json_iter->reenter_child(_start_position + 1, _depth);
-  has_value = started_object();
+  _json_iter->reenter_child(start_position() + 1, _depth);
+
+  SIMDJSON_TRY( started_object().get(has_value) );
   while (true) {
     SIMDJSON_ASSUME(has_value); // we should reach search_start before ever reaching the end of the object
     SIMDJSON_ASSUME( _json_iter->_depth == _depth ); // We must be at the start of a field
@@ -342,6 +349,7 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator
 simdjson_warn_unused simdjson_really_inline simdjson_result<raw_json_string> value_iterator::field_key() noexcept {
   assert_at_next();
 
+  // started_object() and has_next_field() already checked that we have a key
   const uint8_t *key = _json_iter->advance();
   if (*(key++) != '"') { return _json_iter->report_error(TAPE_ERROR, "Object key is not a string"); }
   return raw_json_string(key);
@@ -350,6 +358,7 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<raw_json_string> val
 simdjson_warn_unused simdjson_really_inline error_code value_iterator::field_value() noexcept {
   assert_at_next();
 
+  // started_object() and has_next_field() already checked that we have a : and a value token
   if (*_json_iter->advance() != ':') { return _json_iter->report_error(TAPE_ERROR, "Missing colon in object field"); }
   _json_iter->descend_to(depth()+1);
   return SUCCESS;
@@ -378,16 +387,16 @@ inline std::string value_iterator::to_string() const noexcept {
 
 simdjson_warn_unused simdjson_really_inline bool value_iterator::started_array() noexcept {
   assert_at_container_start();
+  SIMDJSON_TRY( _json_iter->require_tokens(1) );
   if (*_json_iter->peek() == ']') {
     logger::log_value(*_json_iter, "empty array");
     _json_iter->advance();
     _json_iter->ascend_to(depth()-1);
     return false;
   }
-  logger::log_start_value(*_json_iter, "array");
   _json_iter->descend_to(depth()+1);
 #ifdef SIMDJSON_DEVELOPMENT_CHECKS
-  _json_iter->set_start_position(_depth, _start_position);
+  _json_iter->set_start_position(_depth, start_position());
 #endif
   return true;
 }
@@ -395,12 +404,16 @@ simdjson_warn_unused simdjson_really_inline bool value_iterator::started_array()
 simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::has_next_element() noexcept {
   assert_at_next();
 
-  switch (*_json_iter->advance()) {
+  const uint8_t *json;
+  logger::log_event(*this, "has_next_element");
+  SIMDJSON_TRY( _json_iter->try_advance().get(json) )
+  switch (*json) {
     case ']':
       logger::log_end_value(*_json_iter, "array");
       _json_iter->ascend_to(depth()-1);
       return false;
     case ',':
+      SIMDJSON_TRY( _json_iter->require_tokens(1) );
       _json_iter->descend_to(depth()+1);
       return true;
     default:
@@ -455,22 +468,33 @@ simdjson_warn_unused simdjson_really_inline simdjson_result<uint64_t> value_iter
   auto max_len = peek_start_length();
   auto json = advance_root_scalar("uint64");
   uint8_t tmpbuf[20+1]; // <20 digits> is the longest possible unsigned integer
-  if (!_json_iter->copy_to_buffer(json, max_len, tmpbuf)) { logger::log_error(*_json_iter, _start_position, depth(), "Root number more than 20 characters"); return NUMBER_ERROR; }
+  if (!_json_iter->copy_to_buffer(json, max_len, tmpbuf)) {
+    logger::log_error(*_json_iter, start_position(), depth(), "Root number more than 20 characters");
+    return NUMBER_ERROR;
+  }
   return numberparsing::parse_unsigned(tmpbuf);
 }
 simdjson_warn_unused simdjson_really_inline simdjson_result<int64_t> value_iterator::get_root_int64() noexcept {
   auto max_len = peek_start_length();
   auto json = advance_root_scalar("int64");
   uint8_t tmpbuf[20+1]; // -<19 digits> is the longest possible integer
-  if (!_json_iter->copy_to_buffer(json, max_len, tmpbuf)) { logger::log_error(*_json_iter, _start_position, depth(), "Root number more than 20 characters"); return NUMBER_ERROR; }
+  if (!_json_iter->copy_to_buffer(json, max_len, tmpbuf)) {
+    logger::log_error(*_json_iter, start_position(), depth(), "Root number more than 20 characters");
+    return NUMBER_ERROR;
+  }
   return numberparsing::parse_integer(tmpbuf);
 }
 simdjson_warn_unused simdjson_really_inline simdjson_result<double> value_iterator::get_root_double() noexcept {
   auto max_len = peek_start_length();
   auto json = advance_root_scalar("double");
-  // Per https://www.exploringbinary.com/maximum-number-of-decimal-digits-in-binary-floating-point-numbers/, 1074 is the maximum number of significant fractional digits. Add 8 more digits for the biggest number: -0.<fraction>e-308.
+  // Per https://www.exploringbinary.com/maximum-number-of-decimal-digits-in-binary-floating-point-numbers/,
+  // 1074 is the maximum number of significant fractional digits. Add 8 more digits for the biggest
+  // number: -0.<fraction>e-308.
   uint8_t tmpbuf[1074+8+1];
-  if (!_json_iter->copy_to_buffer(json, max_len, tmpbuf)) { logger::log_error(*_json_iter, _start_position, depth(), "Root number more than 1082 characters"); return NUMBER_ERROR; }
+  if (!_json_iter->copy_to_buffer(json, max_len, tmpbuf)) {
+    logger::log_error(*_json_iter, start_position(), depth(), "Root number more than 1082 characters");
+    return NUMBER_ERROR;
+  }
   return numberparsing::parse_double(tmpbuf);
 }
 simdjson_warn_unused simdjson_really_inline simdjson_result<bool> value_iterator::get_root_bool() noexcept {
@@ -488,7 +512,7 @@ simdjson_really_inline bool value_iterator::is_root_null() noexcept {
 }
 
 simdjson_warn_unused simdjson_really_inline error_code value_iterator::skip_child() noexcept {
-  SIMDJSON_ASSUME( _json_iter->token.index > _start_position );
+  SIMDJSON_ASSUME( _json_iter->token._position > _start_position );
   SIMDJSON_ASSUME( _json_iter->_depth >= _depth );
 
   return _json_iter->skip_child(depth());
@@ -509,17 +533,17 @@ simdjson_really_inline bool value_iterator::is_open() const noexcept {
 }
 SIMDJSON_POP_DISABLE_WARNINGS
 
-simdjson_really_inline bool value_iterator::at_eof() const noexcept {
-  return _json_iter->at_eof();
+simdjson_really_inline bool value_iterator::at_end() const noexcept {
+  return _json_iter->at_end();
 }
 
 simdjson_really_inline bool value_iterator::at_start() const noexcept {
-  return _json_iter->token.index == _start_position;
+  return _json_iter->token.position() == start_position();
 }
 
 simdjson_really_inline bool value_iterator::at_first_field() const noexcept {
-  SIMDJSON_ASSUME( _json_iter->token.index > _start_position );
-  return _json_iter->token.index == _start_position + 1;
+  SIMDJSON_ASSUME( _json_iter->token._position > _start_position );
+  return _json_iter->token.position() == start_position() + 1;
 }
 
 simdjson_really_inline void value_iterator::abandon() noexcept {
@@ -543,14 +567,14 @@ simdjson_warn_unused simdjson_really_inline json_iterator &value_iterator::json_
 }
 
 simdjson_really_inline const uint8_t *value_iterator::peek_start() const noexcept {
-  return _json_iter->peek(_start_position);
+  return _json_iter->peek(start_position());
 }
 simdjson_really_inline uint32_t value_iterator::peek_start_length() const noexcept {
-  return _json_iter->peek_length(_start_position);
+  return _json_iter->peek_length(start_position());
 }
 
-simdjson_really_inline const uint8_t *value_iterator::advance_start(const char *type) const noexcept {
-  logger::log_value(*_json_iter, _start_position, depth(), type);
+simdjson_really_inline const uint8_t *value_iterator::advance_start(const char *type) noexcept {
+  logger::log_value(*_json_iter, start_position(), depth(), type);
   // If we're not at the position anymore, we don't want to advance the cursor.
   if (!is_at_start()) { return peek_start(); }
 
@@ -560,8 +584,8 @@ simdjson_really_inline const uint8_t *value_iterator::advance_start(const char *
   _json_iter->ascend_to(depth()-1);
   return result;
 }
-simdjson_really_inline error_code value_iterator::advance_container_start(const char *type, const uint8_t *&json) const noexcept {
-  logger::log_start_value(*_json_iter, _start_position, depth(), type);
+simdjson_really_inline error_code value_iterator::advance_container_start(const char *type, const uint8_t *&json) noexcept {
+  logger::log_start_value(*_json_iter, start_position(), depth(), type);
 
   // If we're not at the position anymore, we don't want to advance the cursor.
   if (!is_at_start()) {
@@ -572,13 +596,14 @@ simdjson_really_inline error_code value_iterator::advance_container_start(const 
     return SUCCESS;
   }
 
-  // Get the JSON and advance the cursor, decreasing depth to signify that we have retrieved the value.
+  // Get the JSON and advance the cursor
   assert_at_start();
   json = _json_iter->advance();
   return SUCCESS;
 }
-simdjson_really_inline const uint8_t *value_iterator::advance_root_scalar(const char *type) const noexcept {
-  logger::log_value(*_json_iter, _start_position, depth(), type);
+
+simdjson_really_inline const uint8_t *value_iterator::advance_root_scalar(const char *type) noexcept {
+  logger::log_value(*_json_iter, start_position(), depth(), type);
   if (!is_at_start()) { return peek_start(); }
 
   assert_at_root();
@@ -586,8 +611,8 @@ simdjson_really_inline const uint8_t *value_iterator::advance_root_scalar(const 
   _json_iter->ascend_to(depth()-1);
   return result;
 }
-simdjson_really_inline const uint8_t *value_iterator::advance_non_root_scalar(const char *type) const noexcept {
-  logger::log_value(*_json_iter, _start_position, depth(), type);
+simdjson_really_inline const uint8_t *value_iterator::advance_non_root_scalar(const char *type) noexcept {
+  logger::log_value(*_json_iter, start_position(), depth(), type);
   if (!is_at_start()) { return peek_start(); }
 
   assert_at_non_root_start();
@@ -597,36 +622,43 @@ simdjson_really_inline const uint8_t *value_iterator::advance_non_root_scalar(co
 }
 
 simdjson_really_inline error_code value_iterator::incorrect_type_error(const char *message) const noexcept {
-  logger::log_error(*_json_iter, _start_position, depth(), message);
+  logger::log_error(*_json_iter, start_position(), depth(), message);
   return INCORRECT_TYPE;
 }
 
+simdjson_really_inline error_code value_iterator::error_unless_more_tokens(uint32_t tokens) const noexcept {
+  if ((position() + tokens) > end_position()) {
+    return _json_iter->report_error(TAPE_ERROR, "Document ended early");
+  }
+  return SUCCESS;
+}
+
 simdjson_really_inline bool value_iterator::is_at_start() const noexcept {
-  return _json_iter->token.index == _start_position;
+  return position() == start_position();
 }
 simdjson_really_inline bool value_iterator::is_at_container_start() const noexcept {
-  return _json_iter->token.index == _start_position + 1;
+  return position() == start_position() + 1;
 }
 simdjson_really_inline bool value_iterator::is_at_iterator_start() const noexcept {
   // We can legitimately be either at the first value ([1]), or after the array if it's empty ([]).
-  auto delta = _json_iter->token.index - _start_position;
+  auto delta = position() - start_position();
   return delta == 1 || delta == 2;
 }
 
 inline void value_iterator::assert_at_start() const noexcept {
-  SIMDJSON_ASSUME( _json_iter->token.index == _start_position );
+  SIMDJSON_ASSUME( _json_iter->token._position == _start_position );
   SIMDJSON_ASSUME( _json_iter->_depth == _depth );
   SIMDJSON_ASSUME( _depth > 0 );
 }
 
 inline void value_iterator::assert_at_container_start() const noexcept {
-  SIMDJSON_ASSUME( _json_iter->token.index == _start_position + 1 );
+  SIMDJSON_ASSUME( _json_iter->token._position == _start_position + 1 );
   SIMDJSON_ASSUME( _json_iter->_depth == _depth );
   SIMDJSON_ASSUME( _depth > 0 );
 }
 
 inline void value_iterator::assert_at_next() const noexcept {
-  SIMDJSON_ASSUME( _json_iter->token.index > _start_position );
+  SIMDJSON_ASSUME( _json_iter->token._position > _start_position );
   SIMDJSON_ASSUME( _json_iter->_depth == _depth );
   SIMDJSON_ASSUME( _depth > 0 );
 }
@@ -634,16 +666,16 @@ inline void value_iterator::assert_at_next() const noexcept {
 
 simdjson_really_inline void value_iterator::enter_at_container_start() noexcept {
   _json_iter->_depth = _depth + 1;
-  _json_iter->token.index = _start_position + 1;
+  _json_iter->token._position = _start_position + 1;
 }
 
 simdjson_really_inline void value_iterator::move_at_start() noexcept {
     _json_iter->_depth = _depth;
-  _json_iter->token.index = _start_position;
+  _json_iter->token._position = _start_position;
 }
 
 inline void value_iterator::assert_at_child() const noexcept {
-  SIMDJSON_ASSUME( _json_iter->token.index > _start_position );
+  SIMDJSON_ASSUME( _json_iter->token._position > _start_position );
   SIMDJSON_ASSUME( _json_iter->_depth == _depth + 1 );
   SIMDJSON_ASSUME( _depth > 0 );
 }
@@ -666,8 +698,7 @@ simdjson_really_inline bool value_iterator::is_valid() const noexcept {
   return _json_iter != nullptr;
 }
 
-
-simdjson_really_inline simdjson_result<json_type> value_iterator::type() noexcept {
+simdjson_really_inline simdjson_result<json_type> value_iterator::type() const noexcept {
   switch (*peek_start()) {
     case '{':
       return json_type::object;
@@ -686,6 +717,26 @@ simdjson_really_inline simdjson_result<json_type> value_iterator::type() noexcep
     default:
       return TAPE_ERROR;
   }
+}
+
+simdjson_really_inline token_position value_iterator::start_position() const noexcept {
+  return _start_position;
+}
+
+simdjson_really_inline token_position value_iterator::position() const noexcept {
+  return _json_iter->position();
+}
+
+simdjson_really_inline token_position value_iterator::end_position() const noexcept {
+  return _json_iter->end_position();
+}
+
+simdjson_really_inline token_position value_iterator::last_position() const noexcept {
+  return _json_iter->last_position();
+}
+
+simdjson_really_inline error_code value_iterator::report_error(error_code error, const char *message) noexcept {
+  return _json_iter->report_error(error, message);
 }
 
 } // namespace ondemand

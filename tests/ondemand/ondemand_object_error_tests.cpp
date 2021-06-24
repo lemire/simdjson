@@ -62,8 +62,6 @@ namespace object_error_tests {
   bool object_iterate_unclosed_error() {
     TEST_START();
     ONDEMAND_SUBTEST("unclosed", R"({ "a": 1,         )",    assert_iterate_object(doc.get_object(), { TAPE_ERROR }));
-    // TODO These next two pass the user a value that may run past the end of the buffer if they aren't careful.
-    // In particular, if the padding is decorated with the wrong values, we could cause overrun!
     ONDEMAND_SUBTEST("unclosed", R"({ "a": 1          )",    assert_iterate_object(doc.get_object(), { TAPE_ERROR }));
     ONDEMAND_SUBTEST("unclosed", R"({ "a":            )",    assert_iterate_object(doc.get_object(), { TAPE_ERROR }));
     ONDEMAND_SUBTEST("unclosed", R"({ "a"             )",    assert_iterate_object(doc.get_object(), { TAPE_ERROR }));
@@ -81,9 +79,11 @@ namespace object_error_tests {
   }
   bool object_lookup_unclosed_error() {
     TEST_START();
-    // TODO This one passes the user a value that may run past the end of the buffer if they aren't careful.
-    // In particular, if the padding is decorated with the wrong values, we could cause overrun!
+  #if __SIMDJSON_CHECK_EOF
+    ONDEMAND_SUBTEST("unclosed", R"({ "a":            )",    assert_error(doc["a"], TAPE_ERROR));
+  #else
     ONDEMAND_SUBTEST("unclosed", R"({ "a":            )",    assert_success(doc["a"]));
+  #endif
     ONDEMAND_SUBTEST("unclosed", R"({ "a"             )",    assert_error(doc["a"], TAPE_ERROR));
     ONDEMAND_SUBTEST("unclosed", R"({                 )",    assert_error(doc["a"], TAPE_ERROR));
     TEST_SUCCEED();
