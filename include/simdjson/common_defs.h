@@ -19,6 +19,8 @@ char *to_chars(char *first, const char *last, double value);
  * Defined in src/from_chars
  */
 double from_chars(const char *first) noexcept;
+double from_chars(const char *first, const char* end) noexcept;
+
 }
 
 #ifndef SIMDJSON_EXCEPTIONS
@@ -249,6 +251,12 @@ namespace std {
 #ifndef NDEBUG
 #define SIMDJSON_DEVELOPMENT_CHECKS
 #endif
+#endif
+
+// Feature flag for partially-implemented "don't require padding" feature
+// TODO remove once feature complete.
+#ifndef __SIMDJSON_CHECK_EOF
+# define __SIMDJSON_CHECK_EOF 1
 #endif
 
 #if SIMDJSON_CPLUSPLUS17

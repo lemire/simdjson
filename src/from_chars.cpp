@@ -134,6 +134,86 @@ decimal parse_decimal(const char *&p) noexcept {
   return answer;
 }
 
+// This should always succeed since it follows a call to parse_number.
+// Will not read at or beyond the "end" pointer.
+decimal parse_decimal(const char *&p, const char * end) noexcept {
+  decimal answer;
+  answer.num_digits = 0;
+  answer.decimal_point = 0;
+  answer.truncated = false;
+  if(p == end) { return answer; } // should never happen
+  answer.negative = (*p == '-');
+  if ((*p == '-') || (*p == '+')) {
+    ++p;
+  }
+
+  while ((p != end) && (*p == '0')) {
+    ++p;
+  }
+  while ((p != end) && is_integer(*p)) {
+    if (answer.num_digits < max_digits) {
+      answer.digits[answer.num_digits] = uint8_t(*p - '0');
+    }
+    answer.num_digits++;
+    ++p;
+  }
+  if ((p != end) && (*p == '.')) {
+    ++p;
+    if(p == end) { return answer; } // should never happen
+    const char *first_after_period = p;
+    // if we have not yet encountered a zero, we have to skip it as well
+    if (answer.num_digits == 0) {
+      // skip zeros
+      while (*p == '0') {
+        ++p;
+      }
+    }
+    while ((p != end) && is_integer(*p)) {
+      if (answer.num_digits < max_digits) {
+        answer.digits[answer.num_digits] = uint8_t(*p - '0');
+      }
+      answer.num_digits++;
+      ++p;
+    }
+    answer.decimal_point = int32_t(first_after_period - p);
+  }
+  if(answer.num_digits > 0) {
+    const char *preverse = p - 1;
+    int32_t trailing_zeros = 0;
+    while ((*preverse == '0') || (*preverse == '.')) {
+      if(*preverse == '0') { trailing_zeros++; };
+      --preverse;
+    }
+    answer.decimal_point += int32_t(answer.num_digits);
+    answer.num_digits -= uint32_t(trailing_zeros);
+  }
+  if(answer.num_digits > max_digits ) {
+    answer.num_digits = max_digits;
+    answer.truncated = true;
+  }
+  if ((p != end) && (('e' == *p) || ('E' == *p))) {
+    ++p;
+    if(p == end) { return answer; } // should never happen
+    bool neg_exp = false;
+    if ('-' == *p) {
+      neg_exp = true;
+      ++p;
+    } else if ('+' == *p) {
+      ++p;
+    }
+    int32_t exp_number = 0; // exponential part
+    while ((p != end) && is_integer(*p)) {
+      uint8_t digit = uint8_t(*p - '0');
+      if (exp_number < 0x10000) {
+        exp_number = 10 * exp_number + digit;
+      }
+      ++p;
+    }
+    answer.decimal_point += (neg_exp ? -exp_number : exp_number);
+  }
+  return answer;
+}
+
 namespace {
 
 // remove all final zeroes
@@ -473,12 +553,35 @@ adjusted_mantissa parse_long_mantissa(const char *first) {
   return compute_float<binary>(d);
 }
 
+template <typename binary>
+adjusted_mantissa parse_long_mantissa(const char *first, const char *end) {
+  decimal d = parse_decimal(first, end);
+  return compute_float<binary>(d);
+}
+
 double from_chars(const char *first) noexcept {
   bool negative = first[0] == '-';
   if (negative) {
     first++;
   }
   adjusted_mantissa am = parse_long_mantissa<binary_format<double>>(first);
+  uint64_t word = am.mantissa;
+  word |= uint64_t(am.power2)
+          << binary_format<double>::mantissa_explicit_bits();
+  word = negative ? word | (uint64_t(1) << binary_format<double>::sign_index())
+                  : word;
+  double value;
+  std::memcpy(&value, &word, sizeof(double));
+  return value;
+}
+
+
+double from_chars(const char *first, const char *end) noexcept {
+  bool negative = first[0] == '-';
+  if (negative) {
+    first++;
+  }
+  adjusted_mantissa am = parse_long_mantissa<binary_format<double>>(first, end);
   uint64_t word = am.mantissa;
   word |= uint64_t(am.power2)
           << binary_format<double>::mantissa_explicit_bits();

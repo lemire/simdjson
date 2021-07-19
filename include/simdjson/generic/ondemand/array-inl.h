@@ -57,8 +57,9 @@ simdjson_really_inline simdjson_result<array> array::start_root(value_iterator &
   SIMDJSON_TRY( iter.start_root_array().get(has_value) );
   return array(iter);
 }
-simdjson_really_inline array array::started(value_iterator &iter) noexcept {
-  simdjson_unused bool has_value = iter.started_array();
+simdjson_really_inline simdjson_result<array> array::started(value_iterator &iter) noexcept {
+  bool has_value;
+  SIMDJSON_TRY(iter.started_array().get(has_value));
   return array(iter);
 }
 
@@ -174,6 +175,10 @@ simdjson_really_inline simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array_
 simdjson_really_inline  simdjson_result<size_t> simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array>::count_elements() & noexcept {
   if (error()) { return error(); }
   return first.count_elements();
+}
+simdjson_really_inline  simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value> simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array>::at(size_t index) noexcept {
+  if (error()) { return error(); }
+  return first.at(index);
 }
 simdjson_really_inline  simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::value> simdjson_result<SIMDJSON_IMPLEMENTATION::ondemand::array>::at_pointer(std::string_view json_pointer) noexcept {
   if (error()) { return error(); }

@@ -15,7 +15,7 @@ namespace wrong_type_error_tests {
     return false; \
   } \
   { \
-    padded_string a_json(std::string(R"({ "a": )") + JSON + " })"); \
+    padded_string a_json(std::string(R"({ "a": )") + JSON + " }"); \
     std::cout << R"(- Subtest: get_)" << (#TYPE) << "() - JSON: " << a_json << std::endl; \
     if (!test_ondemand_doc(a_json, [&](auto doc_result) { \
       ASSERT_ERROR( doc_result["a"].get_##TYPE(), (ERROR) ); \

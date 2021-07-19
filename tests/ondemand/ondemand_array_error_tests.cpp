@@ -62,18 +62,18 @@ namespace array_error_tests {
     TEST_START();
     ONDEMAND_SUBTEST("missing comma", "[1 1]",  assert_iterate(doc, { int64_t(1) }, { TAPE_ERROR }));
     ONDEMAND_SUBTEST("extra comma  ", "[1,,1]", assert_iterate(doc, { int64_t(1) }, { INCORRECT_TYPE, TAPE_ERROR }));
-    ONDEMAND_SUBTEST("extra comma  ", "[,]",    assert_iterate(doc,                 { INCORRECT_TYPE }));
-    ONDEMAND_SUBTEST("extra comma  ", "[,,]",   assert_iterate(doc,                 { INCORRECT_TYPE, INCORRECT_TYPE, TAPE_ERROR }));
+    ONDEMAND_SUBTEST("extra comma  ", "[,]",    assert_iterate(doc,                 { INCORRECT_TYPE, TAPE_ERROR }));
+    ONDEMAND_SUBTEST("extra comma  ", "[,,]",   assert_iterate(doc,                 { INCORRECT_TYPE, TAPE_ERROR }));
     TEST_SUCCEED();
   }
   bool top_level_array_iterate_unclosed_error() {
     TEST_START();
-    ONDEMAND_SUBTEST("unclosed extra comma", "[,",  assert_iterate(doc, { TAPE_ERROR }));
-    ONDEMAND_SUBTEST("unclosed     ", "[1 ",        assert_iterate(doc, { TAPE_ERROR }));
-    ONDEMAND_SUBTEST("unclosed extra comma", "[,,", assert_iterate(doc, { TAPE_ERROR }));
-    ONDEMAND_SUBTEST("unclosed     ", "[1,",        assert_iterate(doc, { TAPE_ERROR }));
-    ONDEMAND_SUBTEST("unclosed     ", "[1",         assert_iterate(doc, { TAPE_ERROR }));
-    ONDEMAND_SUBTEST("unclosed     ", "[",          assert_iterate(doc, { TAPE_ERROR }));
+    ONDEMAND_SUBTEST("unclosed extra comma", "[,",  assert_iterate(doc, { INCOMPLETE_ARRAY_OR_OBJECT }));
+    ONDEMAND_SUBTEST("unclosed     ", "[1 ",        assert_iterate(doc, { INCOMPLETE_ARRAY_OR_OBJECT }));
+    ONDEMAND_SUBTEST("unclosed extra comma", "[,,", assert_iterate(doc, { INCOMPLETE_ARRAY_OR_OBJECT }));
+    ONDEMAND_SUBTEST("unclosed     ", "[1,",        assert_iterate(doc, { INCOMPLETE_ARRAY_OR_OBJECT }));
+    ONDEMAND_SUBTEST("unclosed     ", "[1",         assert_iterate(doc, { INCOMPLETE_ARRAY_OR_OBJECT }));
+    ONDEMAND_SUBTEST("unclosed     ", "[",          assert_iterate(doc, { INCOMPLETE_ARRAY_OR_OBJECT }));
     TEST_SUCCEED();
   }
 
@@ -81,21 +81,29 @@ namespace array_error_tests {
     TEST_START();
     ONDEMAND_SUBTEST("missing comma", R"({ "a": [1 1] })",  assert_iterate(doc["a"], { int64_t(1) }, { TAPE_ERROR }));
     ONDEMAND_SUBTEST("extra comma  ", R"({ "a": [1,,1] })", assert_iterate(doc["a"], { int64_t(1) }, { INCORRECT_TYPE, TAPE_ERROR }));
-    ONDEMAND_SUBTEST("extra comma  ", R"({ "a": [1,,] })",  assert_iterate(doc["a"], { int64_t(1) }, { INCORRECT_TYPE }));
-    ONDEMAND_SUBTEST("extra comma  ", R"({ "a": [,] })",    assert_iterate(doc["a"],                 { INCORRECT_TYPE }));
-    ONDEMAND_SUBTEST("extra comma  ", R"({ "a": [,,] })",   assert_iterate(doc["a"],                 { INCORRECT_TYPE, INCORRECT_TYPE, TAPE_ERROR }));
+    ONDEMAND_SUBTEST("extra comma  ", R"({ "a": [1,,] })",  assert_iterate(doc["a"], { int64_t(1) }, { INCORRECT_TYPE, TAPE_ERROR }));
+    ONDEMAND_SUBTEST("extra comma  ", R"({ "a": [,] })",    assert_iterate(doc["a"],                 { INCORRECT_TYPE, TAPE_ERROR}));
+    ONDEMAND_SUBTEST("extra comma  ", R"({ "a": [,,] })",   assert_iterate(doc["a"],                 { INCORRECT_TYPE, TAPE_ERROR }));
     TEST_SUCCEED();
   }
   bool array_iterate_unclosed_error() {
     TEST_START();
-    ONDEMAND_SUBTEST("unclosed extra comma", R"({ "a": [,)",  assert_iterate(doc["a"],                 { INCORRECT_TYPE, TAPE_ERROR }));
-    ONDEMAND_SUBTEST("unclosed extra comma", R"({ "a": [,,)", assert_iterate(doc["a"],                 { INCORRECT_TYPE, INCORRECT_TYPE, TAPE_ERROR }));
-    ONDEMAND_SUBTEST("unclosed     ", R"({ "a": [1 )",        assert_iterate(doc["a"], { int64_t(1) }, { TAPE_ERROR }));
+    ONDEMAND_SUBTEST("unclosed extra comma", R"({ "a": [,)",  assert_iterate(doc["a"],                 { INCOMPLETE_ARRAY_OR_OBJECT }));
+    ONDEMAND_SUBTEST("unclosed extra comma", R"({ "a": [,,)", assert_iterate(doc["a"],                 { INCOMPLETE_ARRAY_OR_OBJECT }));
+    ONDEMAND_SUBTEST("unclosed     ", R"({ "a": [1 )",        assert_iterate(doc["a"],                 { INCOMPLETE_ARRAY_OR_OBJECT }));
     // TODO These pass the user values that may run past the end of the buffer if they aren't careful
     // In particular, if the padding is decorated with the wrong values, we could cause overrun!
-    ONDEMAND_SUBTEST("unclosed     ", R"({ "a": [1,)",        assert_iterate(doc["a"], { int64_t(1) }, { INCORRECT_TYPE, TAPE_ERROR }));
-    ONDEMAND_SUBTEST("unclosed     ", R"({ "a": [1)",         assert_iterate(doc["a"],                 { NUMBER_ERROR, TAPE_ERROR }));
-    ONDEMAND_SUBTEST("unclosed     ", R"({ "a": [)",          assert_iterate(doc["a"],                 { INCORRECT_TYPE, TAPE_ERROR }));
+    ONDEMAND_SUBTEST("unclosed     ", R"({ "a": [1,)",        assert_iterate(doc["a"],                 { INCOMPLETE_ARRAY_OR_OBJECT }));
+    ONDEMAND_SUBTEST("unclosed     ", R"({ "a": [1)",         assert_iterate(doc["a"],                 { INCOMPLETE_ARRAY_OR_OBJECT }));
+    ONDEMAND_SUBTEST("unclosed     ", R"({ "a": [)",          assert_iterate(doc["a"],                 { INCOMPLETE_ARRAY_OR_OBJECT }));
+    TEST_SUCCEED();
+  }
+  bool array_iterate_incomplete_error() {
+    TEST_START();
+    ONDEMAND_SUBTEST("unclosed after array", R"([ [1] )", assert_iterate(doc.get_array().at(0), { int64_t(1) }, { INCOMPLETE_ARRAY_OR_OBJECT }));
+    ONDEMAND_SUBTEST("unclosed after array", R"([ [1,])", assert_iterate(doc.get_array().at(0), { int64_t(1) }, { INCORRECT_TYPE, INCOMPLETE_ARRAY_OR_OBJECT }));
+    ONDEMAND_SUBTEST("unclosed after array", R"([ [1])",  assert_iterate(doc.get_array().at(0), { int64_t(1) }, { INCOMPLETE_ARRAY_OR_OBJECT }));
+    ONDEMAND_SUBTEST("unclosed after array", R"([ [])",   assert_iterate(doc.get_array().at(0),                 { INCOMPLETE_ARRAY_OR_OBJECT }));
     TEST_SUCCEED();
   }
 
@@ -177,6 +185,7 @@ namespace array_error_tests {
            top_level_array_iterate_unclosed_error() &&
            array_iterate_error() &&
            array_iterate_unclosed_error() &&
+           array_iterate_incomplete_error() &&
 #ifdef SIMDJSON_DEVELOPMENT_CHECKS
            out_of_order_array_iteration_error() &&
            out_of_order_top_level_array_iteration_error() &&

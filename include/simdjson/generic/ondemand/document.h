@@ -368,7 +368,8 @@ protected:
 
   simdjson_really_inline value_iterator resume_value_iterator() noexcept;
   simdjson_really_inline value_iterator get_root_value_iterator() noexcept;
-  simdjson_really_inline value resume_value() noexcept;
+  simdjson_really_inline simdjson_result<value> get_value_unsafe() noexcept;
+  simdjson_really_inline simdjson_result<object> start_or_resume_object() noexcept;
   static simdjson_really_inline document start(ondemand::json_iterator &&iter) noexcept;
 
   //

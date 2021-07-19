@@ -21,13 +21,37 @@ inline std::string document::to_debug_string() noexcept {
 }
 
 simdjson_really_inline value_iterator document::resume_value_iterator() noexcept {
-  return value_iterator(&iter, 1, iter.root_checkpoint());
+  return value_iterator(&iter, 1, iter.root_position());
 }
 simdjson_really_inline value_iterator document::get_root_value_iterator() noexcept {
   return resume_value_iterator();
 }
-simdjson_really_inline value document::resume_value() noexcept {
-  return resume_value_iterator();
+simdjson_really_inline simdjson_result<object> document::start_or_resume_object() noexcept {
+  if (iter.at_root()) {
+    return get_object();
+  } else {
+    return object::resume(resume_value_iterator());
+  }
+}
+simdjson_really_inline simdjson_result<value> document::get_value_unsafe() noexcept {
+  // Make sure we start any arrays or objects before returning, so that start_root_<object/array>()
+  // gets called.
+  switch (*iter.peek()) {
+    case '[': {
+      array result;
+      SIMDJSON_TRY( get_array().get(result) );
+      return value(result.iter);
+    }
+    case '{': {
+      object result;
+      SIMDJSON_TRY( get_object().get(result) );
+      return value(result.iter);
+    }
+    default:
+      // TODO it is still wrong to convert this to a value! get_root_bool / etc. will not be
+      // called if you do this.
+      return value(get_root_value_iterator());
+  }
 }
 simdjson_really_inline simdjson_result<array> document::get_array() & noexcept {
   auto value = get_root_value_iterator();
@@ -107,22 +131,22 @@ simdjson_really_inline simdjson_result<array_iterator> document::end() & noexcep
 }
 
 simdjson_really_inline simdjson_result<value> document::find_field(std::string_view key) & noexcept {
-  return resume_value().find_field(key);
+  return start_or_resume_object().find_field(key);
 }
 simdjson_really_inline simdjson_result<value> document::find_field(const char *key) & noexcept {
-  return resume_value().find_field(key);
+  return start_or_resume_object().find_field(key);
 }
 simdjson_really_inline simdjson_result<value> document::find_field_unordered(std::string_view key) & noexcept {
-  return resume_value().find_field_unordered(key);
+  return start_or_resume_object().find_field_unordered(key);
 }
 simdjson_really_inline simdjson_result<value> document::find_field_unordered(const char *key) & noexcept {
-  return resume_value().find_field_unordered(key);
+  return start_or_resume_object().find_field_unordered(key);
 }
 simdjson_really_inline simdjson_result<value> document::operator[](std::string_view key) & noexcept {
-  return resume_value()[key];
+  return start_or_resume_object()[key];
 }
 simdjson_really_inline simdjson_result<value> document::operator[](const char *key) & noexcept {
-  return resume_value()[key];
+  return start_or_resume_object()[key];
 }
 
 simdjson_really_inline error_code document::consume() noexcept {
@@ -153,7 +177,7 @@ simdjson_really_inline simdjson_result<std::string_view> document::raw_json_toke
 simdjson_really_inline simdjson_result<value> document::at_pointer(std::string_view json_pointer) noexcept {
   rewind(); // Rewind the document each time at_pointer is called
   if (json_pointer.empty()) {
-    return this->resume_value();
+    return this->get_value_unsafe();
   }
   json_type t;
   SIMDJSON_TRY(type().get(t));

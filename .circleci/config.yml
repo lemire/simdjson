@@ -11,7 +11,7 @@ executors:
         environment:
           CXX: g++-8
           CC: gcc-8
-          BUILD_FLAGS: 
+          CMAKE_BUILD_FLAGS:
           CTEST_FLAGS: --output-on-failure
 
   gcc9:
@@ -20,7 +20,7 @@ executors:
         environment:
           CXX: g++-9
           CC: gcc-9
-          BUILD_FLAGS:
+          CMAKE_BUILD_FLAGS:
           CTEST_FLAGS: --output-on-failure
 
   gcc10:
@@ -29,7 +29,7 @@ executors:
         environment:
           CXX: g++-10
           CC: gcc-10
-          BUILD_FLAGS:
+          CMAKE_BUILD_FLAGS:
           CTEST_FLAGS: --output-on-failure
 
   clang10:
@@ -38,7 +38,7 @@ executors:
         environment:
           CXX: clang++-10
           CC: clang-10
-          BUILD_FLAGS:
+          CMAKE_BUILD_FLAGS:
           CTEST_FLAGS: --output-on-failure
 
   clang9:
@@ -47,7 +47,7 @@ executors:
         environment:
           CXX: clang++-9
           CC: clang-9
-          BUILD_FLAGS:
+          CMAKE_BUILD_FLAGS:
           CTEST_FLAGS: --output-on-failure 
 
   clang6:
@@ -56,7 +56,7 @@ executors:
         environment:
           CXX: clang++-6.0
           CC: clang-6.0
-          BUILD_FLAGS:
+          CMAKE_BUILD_FLAGS:
           CTEST_FLAGS: --output-on-failure
 
 # Reusable test commands (and initializer for clang 6)
@@ -191,7 +191,7 @@ jobs:
   sanitize-gcc10:
     description: Build and run tests on GCC 10 and AVX 2 with a cmake sanitize build
     executor: gcc10
-    environment: { CMAKE_FLAGS: -DBUILD_SHARED_LIBS=ON -DSIMDJSON_SANITIZE=ON, BUILD_FLAGS: "", CTEST_FLAGS: --output-on-failure -LE explicitonly }
+    environment: { CMAKE_FLAGS: -DBUILD_SHARED_LIBS=ON -DSIMDJSON_SANITIZE=ON, CTEST_FLAGS: --output-on-failure -LE explicitonly }
     steps: [ cmake_test ]
   sanitize-clang10:
     description: Build and run tests on clang 10 and AVX 2 with a cmake sanitize build
@@ -201,12 +201,20 @@ jobs:
   threadsanitize-gcc10:
     description: Build and run tests on GCC 10 and AVX 2 with a cmake sanitize build
     executor: gcc10
-    environment: { CMAKE_FLAGS: -DBUILD_SHARED_LIBS=ON -DSIMDJSON_SANITIZE_THREADS=ON, BUILD_FLAGS: "", CTEST_FLAGS: --output-on-failure -LE explicitonly }
+    environment: { CMAKE_FLAGS: -DBUILD_SHARED_LIBS=ON -DSIMDJSON_SANITIZE_THREADS=ON, CTEST_FLAGS: --output-on-failure -LE explicitonly }
     steps: [ cmake_test ]
   threadsanitize-clang10:
     description: Build and run tests on clang 10 and AVX 2 with a cmake sanitize build
     executor: clang10
     environment: { CMAKE_FLAGS: -DBUILD_SHARED_LIBS=ON -DSIMDJSON_SANITIZE_THREADS=ON, CTEST_FLAGS: --output-on-failure -LE explicitonly }
+    steps: [ cmake_test ]
+  nocheckeof-clang10:
+    description: Validate that when __SIMDJSON_CHECK_EOF=0, everything still succeeds
+    environment:
+      CXXFLAGS: -D__SIMDJSON_CHECK_EOF=0
+      CMAKE_BUILD_FLAGS: --target ondemand_tests
+      CTEST_FLAGS: --output-on-failure -R ondemand_
+    executor: clang10
     steps: [ cmake_test ]
   # dynamic
   dynamic-gcc10:
@@ -262,7 +270,7 @@ jobs:
   sanitize-haswell-gcc10:
     description: Build and run tests on GCC 10 and AVX 2 with a cmake sanitize build
     executor: gcc10
-    environment: {  CXXFLAGS: -march=haswell, CMAKE_FLAGS: -DBUILD_SHARED_LIBS=ON -DSIMDJSON_SANITIZE=ON, BUILD_FLAGS: "", CTEST_FLAGS: --output-on-failure -LE explicitonly }
+    environment: {  CXXFLAGS: -march=haswell, CMAKE_FLAGS: -DBUILD_SHARED_LIBS=ON -DSIMDJSON_SANITIZE=ON, CTEST_FLAGS: --output-on-failure -LE explicitonly }
     steps: [ cmake_test ]
   sanitize-haswell-clang10:
     description: Build and run tests on clang 10 and AVX 2 with a cmake sanitize build
